@@ -85,7 +85,8 @@
   .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
   .seg button{flex:1;min-height:48px;border-radius:8px;background:transparent;color:var(--dim);font-weight:600}
   .seg button.on{background:var(--panel2);color:var(--text)}
-  input[type=time].num{width:150px;font-size:24px;padding:0 8px;-webkit-appearance:none;appearance:none}
+  .num.t24{width:150px;font-size:28px;letter-spacing:.02em}
+  .num.bad{border-color:var(--red);color:var(--red)}
   .results{display:flex;flex-direction:column;gap:10px;margin-top:4px}
   .rp{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
   .rp .tag{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-weight:700;color:#0d1117}
@@ -159,11 +160,11 @@
   <!-- ============ COUNTDOWN ============ -->
   <section class="view" id="view-countdown">
     <div class="card">
-      <div class="label">Countdown to time</div>
+      <div class="label">Countdown to time · 24h</div>
       <div class="clock mid paused" id="ctClock">0:00:00</div>
       <div class="sub" id="ctSub">Pick a target time</div>
       <div class="btns" style="align-items:center">
-        <input type="time" class="num" id="ctTime" aria-label="Target time" style="width:180px">
+        <input class="num t24" id="ctTime" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" aria-label="Target time (24h)">
         <button class="btn go" id="ctStart">Start</button>
         <button class="btn" id="ctCancel">Cancel</button>
       </div>
@@ -196,8 +197,8 @@
     <div class="card">
       <div class="grid2">
         <div>
-          <div class="label" style="margin-bottom:8px">Take-off time</div>
-          <input type="time" class="num" id="crTo" value="00:00">
+          <div class="label" style="margin-bottom:8px">Take-off time · 24h</div>
+          <input class="num t24" id="crTo" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="00:00">
         </div>
         <div>
           <div class="label" style="margin-bottom:8px">Flight time</div>
@@ -233,7 +234,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v4</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v5</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -243,6 +244,29 @@
   };
   const int = (el, max) => { let n = parseInt(el.value,10); if (isNaN(n)||n<0) n=0; if (max!=null&&n>max) n=max; return n; };
   const pad2 = n => String(n).padStart(2,'0');
+
+  // 24-hour HH:MM entry: type "1607" -> "16:07". read24 returns "HH:MM" or null if not a valid time.
+  function read24(el){
+    const d = el.value.replace(/\D/g,'');
+    if (d.length < 3) return null;
+    const h = +d.slice(0, d.length-2), m = +d.slice(-2);
+    return (h < 24 && m < 60) ? pad2(h) + ':' + pad2(m) : null;
+  }
+  function bind24(el, onChange){
+    el.addEventListener('input', () => {
+      const d = el.value.replace(/\D/g,'').slice(0,4);
+      el.value = d.length > 2 ? d.slice(0, d.length-2) + ':' + d.slice(-2) : d;
+      el.classList.toggle('bad', d.length >= 3 && !read24(el));
+      onChange && onChange(read24(el));
+    });
+    // Tap clears the box (old time shown greyed as a hint); leaving it empty/invalid restores the old time.
+    el.addEventListener('focus', () => { el.dataset.prev = read24(el) || el.dataset.prev || ''; el.placeholder = el.dataset.prev || 'HH:MM'; el.value = ''; });
+    el.addEventListener('blur', () => {
+      const v = read24(el);
+      el.value = v || el.dataset.prev || ''; el.classList.remove('bad'); el.placeholder = 'HH:MM';
+      onChange && onChange(read24(el));
+    });
+  }
 
   function fmt(ms, tenths){
     const neg = ms < 0; ms = Math.abs(ms);
@@ -387,17 +411,17 @@
     if (t.getTime() <= Date.now()) t.setDate(t.getDate() + 1);
     return t.getTime();
   }
-  $('ctTime').addEventListener('input', () => { ct.time = $('ctTime').value; ctSave(); });
+  bind24($('ctTime'), v => { if (v){ ct.time = v; ctSave(); } });
   $('ctStart').onclick = () => {
     unlockAudio();
-    ct.time = $('ctTime').value || ct.time;
+    ct.time = read24($('ctTime')) || ct.time; $('ctTime').value = ct.time; $('ctTime').classList.remove('bad');
     ct.target = ctTargetFrom(ct.time); ct.alarmed = false; stopAlarm();
     ctSave(); updateWake();
   };
   $('ctCancel').onclick = () => { ct.target = null; ct.alarmed = false; stopAlarm(); ctSave(); updateWake(); };
   function ctTick(){
     const now = Date.now(), run = ct.target != null;
-    const target = run ? ct.target : ctTargetFrom($('ctTime').value || ct.time);
+    const target = run ? ct.target : ctTargetFrom(read24($('ctTime')) || ct.time);
     const rem = target - now, tomorrow = new Date(target).toDateString() !== new Date(now).toDateString();
     if (run && rem <= 0 && !ct.alarmed){ ct.alarmed = true; startAlarm('Reached ' + hm(new Date(ct.target))); }
     const over = run && rem <= 0;
@@ -437,11 +461,12 @@
   const colors = ['var(--blue)','var(--violet)','var(--green)'];
 
   function crCalc(){
-    const [th, tm] = ($('crTo').value || '00:00').split(':').map(Number);
+    const toStr = read24($('crTo')) || cr.to || '00:00'; cr.to = toStr;
+    const [th, tm] = toStr.split(':').map(Number);
     const to = th*60 + tm;
     const ft = int($('crFh'))*60 + int($('crFm'),59);
     const n = +document.querySelector('#crCrew .on').dataset.n;
-    store.set('cr', {to: $('crTo').value || '00:00', fh:int($('crFh')), fm:int($('crFm'),59), n});
+    store.set('cr', {to: toStr, fh:int($('crFh')), fm:int($('crFm'),59), n});
 
     const land = to + ft, rs = to + 30, re = land - 60, W = re - rs;
     $('crMeta').innerHTML = `<span>T/O <b>${hhmm(to)}</b></span><span>Landing <b>${hhmm(land)}</b></span>` +
@@ -465,14 +490,15 @@
       `<div class="cap" style="left:${pct(re)};right:0"></div>`;
     $('crTicks').innerHTML = `<span>T/O ${hhmm(to)}</span><span>LDG ${hhmm(land)}</span>`;
   }
-  ['crTo','crFh','crFm'].forEach(id => $(id).addEventListener('input', crCalc));
+  bind24($('crTo'), crCalc);
+  ['crFh','crFm'].forEach(id => $(id).addEventListener('input', crCalc));
   document.querySelectorAll('#crCrew button').forEach(btn => btn.onclick = () => {
     document.querySelectorAll('#crCrew button').forEach(x => x.classList.toggle('on', x===btn)); crCalc();
   });
   document.querySelectorAll('#crCrew button').forEach(x => x.classList.toggle('on', +x.dataset.n === cr.n));
 
   // select-all on focus for quick number entry
-  document.querySelectorAll('input.num:not([type=time])').forEach(i => i.addEventListener('focus', () => setTimeout(()=>i.select(),0)));
+  document.querySelectorAll('input.num:not(.t24)').forEach(i => i.addEventListener('focus', () => setTimeout(()=>i.select(),0)));
 
   /* ---------- Scratchpads (Apple Pencil aware) ---------- */
   let penSeen = store.get('penSeen', false);
