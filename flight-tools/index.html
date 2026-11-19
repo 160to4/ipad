@@ -113,6 +113,10 @@
   .parow .num.t24{width:120px}
   .parow .out{margin-left:auto;font-size:24px;font-variant-numeric:tabular-nums;font-weight:500;text-align:right}
   .parow .out.near{margin-left:4px}
+  .grp{display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
+  .vbar{width:1px;height:34px;background:var(--line);margin:0 4px}
+  .big2{font-size:24px;font-variant-numeric:tabular-nums}
+  .parow .unit{font-size:15px}
   .parow .num.name{width:200px;text-align:left;padding:0 12px}
   .capt{font-size:21px}
   .parow .out small{font-size:14px;color:var(--dim);font-weight:400}
@@ -260,7 +264,12 @@
 
       <div class="parow">
         <div class="k">Multi-sector</div>
-        <div class="ctl"><select class="num sel dd" id="paMs"></select></div>
+        <div class="ctl">
+          <select class="num sel dd" id="paMs"></select>
+          <i class="vbar"></i>
+          <span class="grp"><span class="unit">Departure</span><select class="num sel dd" id="paDep"></select></span>
+          <span class="grp"><span class="unit">Destination</span><select class="num sel dd" id="paDest"></select></span>
+        </div>
       </div>
 
       <div class="parow">
@@ -275,17 +284,14 @@
       <div class="parow">
         <div class="k">Local time</div>
         <div class="ctl">
-          <select class="num sel" id="paOff"></select>
-          <div class="out"><span class="unit">now</span> <span id="paNow">--:--</span></div>
+          <div class="big2" id="paNow">--:--</div><span class="unit" id="paNowZone">pick a destination</span>
         </div>
       </div>
 
       <div class="parow">
         <div class="k">Time diff</div>
         <div class="ctl">
-          <input class="num" id="paDh" inputmode="numeric" pattern="[0-9]*" placeholder="0"><span class="unit">hr</span>
-          <input class="num" id="paDm" inputmode="numeric" pattern="[0-9]*" placeholder="0"><span class="unit">min</span>
-          <select class="num sel dd" id="paDir"></select>
+          <div class="big2" id="paDiff"><span class="unit">pick departure and destination</span></div>
         </div>
       </div>
 
@@ -336,7 +342,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v15</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v16</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -501,7 +507,7 @@
   $('alarmOk').onclick = stopAlarm;
 
   /* ---------- PA ---------- */
-  const PA_DEF = {ms:'None', land:'', taxi:'', off:'+8:00', dh:'', dm:'', dir:'ahead', cap1:'', cap2:'', cloud:'', rain:'', other:'', tc:'', scp:''};
+  const PA_DEF = {ms:'None', dep:'SIN', dest:'', land:'', taxi:'', cap1:'', cap2:'', cloud:'', rain:'', other:'', tc:'', scp:''};
   const pa = Object.assign({}, PA_DEF, store.get('pa', {}));
   const paSave = () => store.set('pa', pa);
   const MS_LINES = {
@@ -511,12 +517,52 @@
     SQ25: 'For passengers continuing on this service to Singapore, we wish you a safe and pleasant journey ahead.'
   };
   const SCP_LINES = { yes: 'Cabin crew, please secure the cabin for landing.', no: 'Cabin crew, please prepare the aircraft for arrival.' };
-  const OFFSETS = ['-12:00','-11:00','-10:00','-9:30','-9:00','-8:00','-7:00','-6:00','-5:00','-4:00','-3:30','-3:00','-2:00','-1:00','+0:00',
-    '+1:00','+2:00','+3:00','+3:30','+4:00','+4:30','+5:00','+5:30','+5:45','+6:00','+6:30','+7:00','+8:00','+8:45','+9:00','+9:30',
-    '+10:00','+10:30','+11:00','+12:00','+12:45','+13:00','+14:00'];
-  const offMin = o => { const sg = o[0]==='-' ? -1 : 1, [h,m] = o.slice(1).split(':').map(Number); return sg*(h*60+m); };
-  const offLabel = o => 'UTC' + o[0] + o.slice(1).replace(/:00$/,'');
-  $('paOff').innerHTML = OFFSETS.map(o => `<option value="${o}">${offLabel(o)}</option>`).join('');
+  // Airports with their time zones; the device works out the current UTC offset (incl. daylight saving), offline.
+  const AIRPORTS = [
+    ['SIN','Singapore','Asia/Singapore'],
+    ['ADL','Adelaide','Australia/Adelaide'],['AKL','Auckland','Pacific/Auckland'],['AMS','Amsterdam','Europe/Amsterdam'],
+    ['BCN','Barcelona','Europe/Madrid'],['BKK','Bangkok','Asia/Bangkok'],['BLR','Bengaluru','Asia/Kolkata'],
+    ['BNE','Brisbane','Australia/Brisbane'],['BOM','Mumbai','Asia/Kolkata'],['BRU','Brussels','Europe/Brussels'],
+    ['CAN','Guangzhou','Asia/Shanghai'],['CCU','Kolkata','Asia/Kolkata'],['CDG','Paris','Europe/Paris'],
+    ['CEB','Cebu','Asia/Manila'],['CGK','Jakarta','Asia/Jakarta'],['CHC','Christchurch','Pacific/Auckland'],
+    ['CMB','Colombo','Asia/Colombo'],['CPH','Copenhagen','Europe/Copenhagen'],['CPT','Cape Town','Africa/Johannesburg'],
+    ['DAC','Dhaka','Asia/Dhaka'],['DEL','Delhi','Asia/Kolkata'],['DPS','Bali','Asia/Makassar'],['DRW','Darwin','Australia/Darwin'],
+    ['DXB','Dubai','Asia/Dubai'],['EWR','Newark','America/New_York'],['FCO','Rome','Europe/Rome'],
+    ['FRA','Frankfurt','Europe/Berlin'],['FUK','Fukuoka','Asia/Tokyo'],['HAN','Hanoi','Asia/Ho_Chi_Minh'],
+    ['HKG','Hong Kong','Asia/Hong_Kong'],['HKT','Phuket','Asia/Bangkok'],['HND','Tokyo Haneda','Asia/Tokyo'],
+    ['HYD','Hyderabad','Asia/Kolkata'],['IAH','Houston','America/Chicago'],['ICN','Seoul','Asia/Seoul'],
+    ['IST','Istanbul','Europe/Istanbul'],['JFK','New York','America/New_York'],['JNB','Johannesburg','Africa/Johannesburg'],
+    ['KIX','Osaka','Asia/Tokyo'],['KTM','Kathmandu','Asia/Kathmandu'],['KUL','Kuala Lumpur','Asia/Kuala_Lumpur'],
+    ['LAX','Los Angeles','America/Los_Angeles'],['LGW','London Gatwick','Europe/London'],['LHR','London','Europe/London'],
+    ['MAA','Chennai','Asia/Kolkata'],['MAN','Manchester','Europe/London'],['MEL','Melbourne','Australia/Melbourne'],
+    ['MLE','Malé','Indian/Maldives'],['MNL','Manila','Asia/Manila'],['MUC','Munich','Europe/Berlin'],
+    ['MXP','Milan','Europe/Rome'],['NGO','Nagoya','Asia/Tokyo'],['NRT','Tokyo Narita','Asia/Tokyo'],
+    ['PEK','Beijing','Asia/Shanghai'],['PEN','Penang','Asia/Kuala_Lumpur'],['PER','Perth','Australia/Perth'],
+    ['PKX','Beijing Daxing','Asia/Shanghai'],['PNH','Phnom Penh','Asia/Phnom_Penh'],['PVG','Shanghai','Asia/Shanghai'],
+    ['RGN','Yangon','Asia/Yangon'],['SEA','Seattle','America/Los_Angeles'],['SFO','San Francisco','America/Los_Angeles'],
+    ['SGN','Ho Chi Minh City','Asia/Ho_Chi_Minh'],['SUB','Surabaya','Asia/Jakarta'],['SYD','Sydney','Australia/Sydney'],
+    ['SZX','Shenzhen','Asia/Shanghai'],['TPE','Taipei','Asia/Taipei'],['XMN','Xiamen','Asia/Shanghai'],
+    ['YVR','Vancouver','America/Vancouver'],['ZRH','Zurich','Europe/Zurich']
+  ];
+  const SPOKEN = {NRT:'Tokyo', HND:'Tokyo', LGW:'London', PKX:'Beijing', EWR:'New York'};
+  const APT = Object.fromEntries(AIRPORTS.map(([c,n,tz]) => [c, {name:n, tz}]));
+  // UTC offset in minutes for a time zone at a given moment
+  function tzOff(tz, t){
+    try{
+      const p = new Intl.DateTimeFormat('en-US', {timeZone:tz, hourCycle:'h23', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}).formatToParts(new Date(t));
+      const g = k => +p.find(x => x.type===k).value;
+      return Math.round((Date.UTC(g('year'), g('month')-1, g('day'), g('hour') % 24, g('minute')) - Math.floor(t/60000)*60000) / 60000);
+    }catch(e){ return null; }
+  }
+  const offLabel = m => 'UTC' + (m<0?'−':'+') + Math.floor(Math.abs(m)/60) + (Math.abs(m)%60 ? ':' + pad2(Math.abs(m)%60) : '');
+  const aptOpts = AIRPORTS.map(([c,n]) => [c, `${c} · ${n}`]);
+  // reference moment for offsets: today's landing time if entered, else now
+  function refTime(){
+    if (!pa.land) return Date.now();
+    const [h,m] = pa.land.split(':').map(Number), d = new Date(); d.setUTCHours(h, m, 0, 0); return d.getTime();
+  }
+  const destOff = () => pa.dest && APT[pa.dest] ? tzOff(APT[pa.dest].tz, refTime()) : null;
+  const depOff  = () => pa.dep  && APT[pa.dep]  ? tzOff(APT[pa.dep].tz,  refTime()) : null;
 
   // dropdown: optional=true adds a blank "—" first choice (placeholder shows the group name)
   function chipGroup(id, key, options, optional, blank){
@@ -529,7 +575,8 @@
   }
   const paints = [
     chipGroup('paMs','ms',[['None','None'],['SQ12','SQ12'],['SQ11','SQ11'],['SQ26','SQ26'],['SQ25','SQ25']]),
-    chipGroup('paDir','dir',[['ahead','ahead of Singapore'],['behind','behind Singapore']]),
+    chipGroup('paDep','dep', aptOpts, true),
+    chipGroup('paDest','dest', aptOpts, true),
     chipGroup('paScp','scp',[['yes','Yes'],['no','No']], true, 'Select…'),
     chipGroup('paCloud','cloud',[['clear skies','Clear skies'],['partly cloudy','Partly cloudy'],['cloudy','Cloudy']], true, 'Clouds'),
     chipGroup('paRain','rain',[['recent rain','Recent rain'],['rain reported','Rain reported'],['light rain','Light rain'],['heavy rain','Heavy rain']], true, ''),
@@ -537,13 +584,12 @@
   ];
 
   function paLoad(){
-    $('paLand').value = pa.land; $('paTaxi').value = pa.taxi; $('paOff').value = pa.off;
-    $('paDh').value = pa.dh; $('paDm').value = pa.dm; $('paTc').value = pa.tc;
+    $('paLand').value = pa.land; $('paTaxi').value = pa.taxi; $('paTc').value = pa.tc;
     $('paCap1').value = pa.cap1; $('paCap2').value = pa.cap2;
     paints.forEach(f => f());
   }
   bind24($('paLand'), v => { pa.land = v || ''; paSave(); paRender(); });
-  [['paTaxi','taxi'],['paDh','dh'],['paDm','dm']].forEach(([id,k]) => $(id).addEventListener('input', () => {
+  [['paTaxi','taxi']].forEach(([id,k]) => $(id).addEventListener('input', () => {
     $(id).value = $(id).value.replace(/\D/g,'').slice(0,3); pa[k] = $(id).value; paSave(); paRender();
   }));
   $('paTc').addEventListener('input', () => {
@@ -552,30 +598,38 @@
   });
   [['paCap1','cap1'],['paCap2','cap2']].forEach(([id,k]) => $(id).addEventListener('input', () => { pa[k] = $(id).value; paSave(); }));
   $('paNeg').onclick = () => { const v = $('paTc').value; $('paTc').value = v.startsWith('-') ? v.slice(1) : '-' + v; pa.tc = $('paTc').value; paSave(); paRender(); };
-  $('paOff').addEventListener('change', () => { pa.off = $('paOff').value; paSave(); paRender(); paClock(); });
   let paClrArm = false;
   $('paClear').onclick = () => {
     if (!paClrArm){ paClrArm = true; $('paClear').textContent = 'Tap again to clear'; setTimeout(()=>{ paClrArm=false; $('paClear').textContent='Clear inputs'; }, 2000); return; }
     paClrArm = false; $('paClear').textContent = 'Clear inputs';
-    const keep = {off: pa.off, dir: pa.dir}; Object.assign(pa, PA_DEF, keep); paSave(); paLoad(); paRender();
+    Object.assign(pa, PA_DEF); paSave(); paLoad(); paRender();
   };
 
   const hm24 = mins => { const d = Math.floor(mins/1440), m = ((mins%1440)+1440)%1440;
     return pad2(Math.floor(m/60)) + ':' + pad2(m%60) + (d>0 ? '<span class="plus1">+1</span>' : d<0 ? '<span class="plus1">−1</span>' : ''); };
   function paClock(){
-    const d = new Date(Date.now() + offMin(pa.off)*60000);
-    const t = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes());
+    const off = pa.dest && APT[pa.dest] ? tzOff(APT[pa.dest].tz, Date.now()) : null;
+    let t = '--:--', z = 'pick a destination';
+    if (off != null){ const d = new Date(Date.now() + off*60000); t = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); z = `${APT[pa.dest].name} · ${offLabel(off)}`; }
     if ($('paNow').textContent !== t) $('paNow').textContent = t;
+    if ($('paNowZone').textContent !== z) $('paNowZone').textContent = z;
   }
   setInterval(paClock, 1000);
 
   function paRender(){
     const tc = parseFloat(pa.tc), hasT = !isNaN(tc);
     $('paTf').textContent = hasT ? Math.round(tc*9/5 + 32) + '°F' : '–°F';
-    if (pa.land){
-      const [h,m] = pa.land.split(':').map(Number), loc = h*60 + m + offMin(pa.off);
+    const dOff = destOff(), sOff = depOff();
+    if (pa.land && dOff != null){
+      const [h,m] = pa.land.split(':').map(Number), loc = h*60 + m + dOff;
       $('paLandOut').innerHTML = `<small>land</small> ${hm24(loc)}` + (pa.taxi ? ` <small>· gate</small> ${hm24(loc + (+pa.taxi))}` : '') + ' <small>local</small>';
     } else $('paLandOut').innerHTML = '';
+    if (dOff != null && sOff != null){
+      const diff = dOff - sOff, a = Math.abs(diff), h = Math.floor(a/60), m = a%60, city = SPOKEN[pa.dep] || APT[pa.dep].name;
+      const amt = [h ? `${h} hour${h===1?'':'s'}` : '', m ? `${m} minute${m===1?'':'s'}` : ''].filter(Boolean).join(' and ');
+      $('paDiff').innerHTML = diff === 0 ? `Same time as ${city}` : `${amt} ${diff > 0 ? 'ahead of' : 'behind'} ${city}`;
+    } else $('paDiff').innerHTML = '<span class="unit">pick departure and destination</span>';
+    paClock();
     $('paMsSay').textContent = pa.ms !== 'None' ? MS_LINES[pa.ms] : '';
     $('paScpSay').textContent = pa.scp ? SCP_LINES[pa.scp] : '';
   }
