@@ -159,6 +159,16 @@
   <!-- ============ COUNTDOWN ============ -->
   <section class="view" id="view-countdown">
     <div class="card">
+      <div class="label">Countdown to time</div>
+      <div class="clock mid paused" id="ctClock">0:00:00</div>
+      <div class="sub" id="ctSub">Pick a target time</div>
+      <div class="btns" style="align-items:center">
+        <input type="time" class="num" id="ctTime" aria-label="Target time" style="width:180px">
+        <button class="btn go" id="ctStart">Start</button>
+        <button class="btn" id="ctCancel">Cancel</button>
+      </div>
+    </div>
+    <div class="card">
       <div class="label">Countdown</div>
       <div class="clock paused" id="cdClock">0:30:00</div>
       <div class="sub" id="cdSub">Ready</div>
@@ -176,22 +186,6 @@
         <div class="colon">:</div>
         <label class="field"><input class="num" id="cdS" inputmode="numeric" pattern="[0-9]*" value="0"><span>sec</span></label>
         <button class="btn small" id="cdSet" style="margin-left:6px;margin-bottom:22px">Set</button>
-      </div>
-      <div class="btns" style="margin-top:10px">
-        <button class="btn small" data-add="60">+1 min</button>
-        <button class="btn small" data-add="300">+5 min</button>
-        <button class="btn small" data-add="600">+10 min</button>
-        <button class="btn small" data-add="1800">+30 min</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="label">Countdown to time</div>
-      <div class="clock mid paused" id="ctClock">0:00:00</div>
-      <div class="sub" id="ctSub">Pick a target time</div>
-      <div class="btns" style="align-items:center">
-        <input type="time" class="num" id="ctTime" aria-label="Target time" style="width:180px">
-        <button class="btn go" id="ctStart">Start</button>
-        <button class="btn" id="ctCancel">Cancel</button>
       </div>
     </div>
     <div class="card pad" data-pad="countdown"></div>
