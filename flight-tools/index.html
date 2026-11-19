@@ -303,7 +303,11 @@
           <input class="num" id="paTc" inputmode="decimal" placeholder="0"><span class="unit">°C</span>
           <div class="out near" id="paTf">–°F</div>
         </div>
-        <div class="say" id="paMsSay"></div>
+      </div>
+
+      <div class="parow" id="paMsRow">
+        <div class="k">Multi-sector</div>
+        <div class="say" id="paMsSay" style="grid-column:auto"></div>
       </div>
 
       <div class="parow">
@@ -326,7 +330,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v12</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v13</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -565,6 +569,7 @@
       $('paLandOut').innerHTML = `<small>land</small> ${hm24(loc)}` + (pa.taxi ? ` <small>· gate</small> ${hm24(loc + (+pa.taxi))}` : '') + ' <small>local</small>';
     } else $('paLandOut').innerHTML = '';
     $('paMsSay').textContent = pa.ms !== 'None' ? MS_LINES[pa.ms] : '';
+    $('paMsRow').style.display = pa.ms !== 'None' ? '' : 'none';
     $('paScpSay').textContent = pa.scp ? SCP_LINES[pa.scp] : '';
   }
   paLoad(); paRender(); paClock();
