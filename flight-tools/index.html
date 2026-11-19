@@ -112,6 +112,7 @@
   .parow .num{width:76px;height:50px;font-size:22px}
   .parow .num.t24{width:120px}
   .parow .out{margin-left:auto;font-size:24px;font-variant-numeric:tabular-nums;font-weight:500;text-align:right}
+  .parow .out.near{margin-left:4px}
   .parow .out small{font-size:14px;color:var(--dim);font-weight:400}
   .parow .num,.parow .num.t24,.parow .num.sel{font-family:inherit;font-size:21px;font-weight:400;letter-spacing:0}
   .parow .say{grid-column:2;font-size:21px;color:var(--amber);line-height:1.35}
@@ -301,7 +302,7 @@
         <div class="ctl">
           <button class="btn small" id="paNeg" aria-label="Toggle minus">±</button>
           <input class="num" id="paTc" inputmode="decimal" placeholder="0"><span class="unit">°C</span>
-          <div class="out" id="paTf">–°F</div>
+          <div class="out near" id="paTf">–°F</div>
         </div>
       </div>
 
@@ -325,7 +326,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v10</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v11</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -510,7 +511,7 @@
   // dropdown: optional=true adds a blank "—" first choice (placeholder shows the group name)
   function chipGroup(id, key, options, optional, blank){
     const el = $(id);
-    el.innerHTML = (optional ? `<option value="">${blank || '—'}</option>` : '') +
+    el.innerHTML = (optional ? `<option value="">${blank ?? '—'}</option>` : '') +
       options.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
     const paint = () => { el.value = pa[key]; el.classList.toggle('empty', !pa[key]); };
     el.addEventListener('change', () => { pa[key] = el.value; paint(); paSave(); paRender(); });
@@ -521,8 +522,8 @@
     chipGroup('paDir','dir',[['ahead','ahead of Singapore'],['behind','behind Singapore']]),
     chipGroup('paScp','scp',[['yes','Yes'],['no','No']], true, 'Select…'),
     chipGroup('paCloud','cloud',[['clear skies','Clear skies'],['partly cloudy','Partly cloudy'],['cloudy','Cloudy']], true, 'Clouds'),
-    chipGroup('paRain','rain',[['recent rain','Recent rain'],['rain reported','Rain reported'],['light rain','Light rain'],['heavy rain','Heavy rain']], true, 'Rain'),
-    chipGroup('paOther','other',[['hazy','Hazy'],['foggy','Foggy'],['snow','Snow'],['gusty','Gusty']], true, 'Other')
+    chipGroup('paRain','rain',[['recent rain','Recent rain'],['rain reported','Rain reported'],['light rain','Light rain'],['heavy rain','Heavy rain']], true, ''),
+    chipGroup('paOther','other',[['hazy','Hazy'],['foggy','Foggy'],['snow','Snow'],['gusty','Gusty']], true, '')
   ];
 
   function paLoad(){
