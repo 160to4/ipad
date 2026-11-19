@@ -1,6 +1,6 @@
 // Flight Deck Tools — offline cache.
 // Bump VERSION whenever any file changes so devices pick up the update.
-const VERSION = 'fdt-v3';
+const VERSION = 'fdt-v4';
 const FILES = [
   './',
   './index.html',
@@ -12,7 +12,7 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, {cache: 'reload'})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -30,7 +30,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(new Request(req.url, {cache: 'no-store'}))
         .then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); return res; })
         .catch(() => caches.match('./index.html'))
     );

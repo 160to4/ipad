@@ -233,6 +233,7 @@
   </div>
 </div>
 
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v4</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -563,8 +564,20 @@
 
   /* ---------- Offline support ---------- */
   try{
-    if ('serviceWorker' in navigator && location.protocol === 'https:')
-      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      const hadController = !!navigator.serviceWorker.controller;
+      let refreshing = false;
+      // A new version took over: reload once so it's on screen straight away.
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || refreshing) return; refreshing = true; location.reload();
+      });
+      navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(reg => {
+        const check = () => reg.update().catch(()=>{});
+        check();
+        // Home Screen apps usually resume instead of reloading, so check on every return.
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+      }).catch(()=>{});
+    }
   }catch(e){}
 })();
 </script>
