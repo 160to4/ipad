@@ -105,26 +105,35 @@
   .chip.on{background:#3a2a0a;color:#ffd58a;border-color:var(--amber)}
   .unit{color:var(--dim);font-size:14px}
   .num.sel{width:130px;font-size:20px;color:var(--text);background:var(--bg);padding:0 10px;-webkit-appearance:none;appearance:none;text-align:left}
-  .parow{display:grid;grid-template-columns:120px 1fr;gap:6px 14px;padding:12px 0;border-top:1px solid var(--line);align-items:center}
+  .parow{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;padding:9px 0;border-top:1px solid var(--line);align-items:center}
   .parow:nth-child(2){border-top:0;margin-top:6px}
   .parow .k{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600}
-  .parow .ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .parow .num{width:76px;height:50px;font-size:22px}
-  .parow .num.t24{width:120px}
-  .parow .out{margin-left:auto;font-size:24px;font-variant-numeric:tabular-nums;font-weight:500;text-align:right}
+  .parow .ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .parow .num{width:60px;height:42px;font-size:17px;border-radius:8px}
+  .parow .num.t24{width:84px}
+  .parow .out{margin-left:auto;font-size:17px;font-variant-numeric:tabular-nums;font-weight:500;text-align:right}
   .parow .out.near{margin-left:4px}
-  .grp{display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
+  .ls{display:none}
+  @media (max-width:900px){
+    .lf{display:none} .ls{display:inline}
+    .parow{grid-template-columns:92px 1fr;gap:6px 8px}
+    .parow .k{font-size:11px;letter-spacing:.04em}
+    .parow .num,.parow .num.t24,.parow .num.sel,.parow .say,.capt,.big2,.parow .out{font-size:15px}
+    .parow .num.sel.dd{padding:0 24px 0 8px;background-position:right 8px center}
+    .parow .ctl{gap:6px}
+  }
+  .grp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
   .vbar{width:1px;height:34px;background:var(--line);margin:0 4px}
-  .big2{font-size:24px;font-variant-numeric:tabular-nums}
-  .parow .unit{font-size:15px}
-  .parow .num.name{width:200px;text-align:left;padding:0 12px}
-  .capt{font-size:21px}
+  .big2{font-size:17px;font-variant-numeric:tabular-nums}
+  .parow .unit{font-size:13px}
+  .parow .num.name{width:170px;text-align:left;padding:0 12px}
+  .capt{font-size:17px}
   .parow .out small{font-size:14px;color:var(--dim);font-weight:400}
-  .parow .num,.parow .num.t24,.parow .num.sel{font-family:inherit;font-size:21px;font-weight:400;letter-spacing:0}
-  .parow .say{grid-column:2;font-size:21px;color:var(--amber);line-height:1.35}
+  .parow .num,.parow .num.t24,.parow .num.sel{font-family:inherit;font-size:17px;font-weight:400;letter-spacing:0;height:42px}
+  .parow .say{grid-column:2;font-size:17px;color:var(--amber);line-height:1.35}
   .parow .say:empty{display:none}
   .parow .num.sel{width:130px}
-  .parow .num.sel.dd{width:auto;min-width:150px;padding-right:34px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 12px center}
+  .parow .num.sel.dd{width:auto;min-width:0;padding-right:30px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 12px center}
   .parow select.dd.empty{color:var(--dim)}
   .wxrow{flex-direction:column;align-items:flex-start}
   .wxrow .sep{display:none}
@@ -267,8 +276,8 @@
         <div class="ctl">
           <select class="num sel dd" id="paMs"></select>
           <i class="vbar"></i>
-          <span class="grp"><span class="unit">Departure</span><select class="num sel dd" id="paDep"></select></span>
-          <span class="grp"><span class="unit">Destination</span><select class="num sel dd" id="paDest"></select></span>
+          <span class="grp"><span class="unit"><span class="lf">Departure</span><span class="ls">Dep</span></span><select class="num sel dd" id="paDep"></select></span>
+          <span class="grp"><span class="unit"><span class="lf">Destination</span><span class="ls">Dest</span></span><select class="num sel dd" id="paDest"></select></span>
         </div>
       </div>
 
@@ -342,7 +351,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v16</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v17</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
