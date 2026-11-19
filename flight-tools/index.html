@@ -43,7 +43,7 @@
   header{padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
   main{flex:1;display:flex;flex-direction:column;gap:14px;
     padding:16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));max-width:980px;width:100%;margin:0 auto}
-  section.view{display:none;flex-direction:column;gap:14px;flex:1}
+  section.view{display:none;flex-direction:column;gap:14px;flex:0 0 auto}
   section.view.active{display:flex}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
@@ -154,7 +154,6 @@
         <button class="btn small" id="swSet" style="margin-left:6px;margin-bottom:22px">Set</button>
       </div>
     </div>
-    <div class="card pad" data-pad="stopwatch"></div>
   </section>
 
   <!-- ============ COUNTDOWN ============ -->
@@ -189,7 +188,6 @@
         <button class="btn small" id="cdSet" style="margin-left:6px;margin-bottom:22px">Set</button>
       </div>
     </div>
-    <div class="card pad" data-pad="countdown"></div>
   </section>
 
   <!-- ============ CREW REST ============ -->
@@ -222,8 +220,10 @@
       <div class="ticks" id="crTicks"></div>
       <div class="results" id="crOut" style="margin-top:14px"></div>
     </div>
-    <div class="card pad" data-pad="crew"></div>
   </section>
+
+  <!-- ============ SHARED SCRATCHPAD (same on every tab) ============ -->
+  <div class="card pad" data-pad="shared"></div>
 </main>
 
 <div class="modal" id="alarmModal">
@@ -234,7 +234,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v5</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v6</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -505,7 +505,11 @@
   class Pad {
     constructor(el){
       this.key = 'pad.' + el.dataset.pad;
-      this.strokes = store.get(this.key, []);
+      this.strokes = store.get(this.key, null);
+      if (!this.strokes){ // first run of the shared pad: carry over notes from the old per-tab pads
+        this.strokes = ['stopwatch','countdown','crew'].flatMap(k => store.get('pad.'+k, []));
+        store.set(this.key, this.strokes);
+      }
       this.tool = 'pen'; this.cur = null;
       el.innerHTML = `
         <div class="padbar">
