@@ -25,7 +25,7 @@
     -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
   body{display:flex;flex-direction:column;min-height:100dvh}
   button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulation}
-  input{font:inherit;color:var(--text)}
+  input,select{font:inherit;color:var(--text)}
 
   /* Tabs */
   header{position:sticky;top:0;z-index:5;background:rgba(13,17,23,.92);backdrop-filter:blur(10px);
@@ -113,6 +113,7 @@
   .parow .num.t24{width:120px}
   .parow .out{margin-left:auto;font-size:24px;font-variant-numeric:tabular-nums;font-weight:500;text-align:right}
   .parow .out small{font-size:14px;color:var(--dim);font-weight:400}
+  .parow .num,.parow .num.t24,.parow .num.sel{font-family:inherit;font-size:21px;font-weight:400;letter-spacing:0}
   .parow .say{grid-column:2;font-size:21px;color:var(--amber);line-height:1.35}
   .parow .say:empty{display:none}
   .parow .num.sel{width:130px}
@@ -324,7 +325,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v9</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v10</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
