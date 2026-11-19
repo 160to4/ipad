@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Flight Tools">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<title>Flight Deck Tools</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232c; --line:#2a333e;
+    --text:#e6edf3; --dim:#8b97a5; --amber:#f5a524; --green:#3fb950;
+    --red:#f85149; --blue:#58a6ff; --violet:#bc8cff;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+  body{display:flex;flex-direction:column;min-height:100dvh}
+  button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulation}
+  input{font:inherit;color:var(--text)}
+
+  /* Tabs */
+  header{position:sticky;top:0;z-index:5;background:rgba(13,17,23,.92);backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px}
+  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;max-width:720px;margin:0 auto}
+  .tab{flex:1;padding:12px 8px;border-radius:9px;background:transparent;color:var(--dim);font-weight:600;font-size:15px;
+    display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px}
+  .tab[aria-selected="true"]{background:var(--panel2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 2px 8px rgba(0,0,0,.35)}
+  .tab .dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:none}
+  .tab .dot.on{display:inline-block;animation:pulse 1.2s infinite}
+  .tab .dot.alarm{background:var(--red)}
+  @keyframes pulse{50%{opacity:.35}}
+
+  header{padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
+  main{flex:1;display:flex;flex-direction:column;gap:14px;
+    padding:16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));max-width:980px;width:100%;margin:0 auto}
+  section.view{display:none;flex-direction:column;gap:14px;flex:1}
+  section.view.active{display:flex}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600}
+
+  /* Big clock */
+  .clock{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-weight:300;
+    font-size:clamp(64px,13vw,128px);line-height:1;text-align:center;letter-spacing:-.02em;margin:14px 0 6px}
+  .clock small{font-size:.4em;color:var(--dim)}
+  .clock.running{color:var(--text)}
+  .clock.paused{color:var(--amber)}
+  .clock.over{color:var(--red)}
+  .clock.flash{animation:flash .5s steps(2) infinite}
+  @keyframes flash{50%{opacity:.15}}
+  .sub{text-align:center;color:var(--dim);font-size:14px;min-height:20px}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .btns{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .btn{min-width:120px;min-height:56px;padding:0 22px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:17px}
+  .btn:active{transform:scale(.97)}
+  .btn.go{background:#1f6f3a;border-color:#2b8a4b}
+  .btn.stop{background:#7a2a1c;border-color:#9a3a28}
+  .btn.ghost{background:transparent}
+  .btn.small{min-width:0;min-height:44px;font-size:15px;padding:0 14px}
+
+  /* Time entry */
+  .hms{display:flex;gap:8px;align-items:flex-end;justify-content:center;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:4px;align-items:center}
+  .field span{font-size:12px;color:var(--dim)}
+  .num{width:86px;height:56px;text-align:center;font-size:26px;font-variant-numeric:tabular-nums;
+    background:var(--bg);border:1px solid var(--line);border-radius:10px;outline:none}
+  .num:focus{border-color:var(--amber)}
+  .colon{font-size:26px;color:var(--dim);padding-bottom:12px}
+
+  /* Crew rest */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}}
+  .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .seg button{flex:1;min-height:48px;border-radius:8px;background:transparent;color:var(--dim);font-weight:600}
+  .seg button.on{background:var(--panel2);color:var(--text)}
+  input[type=time].num{width:150px;font-size:24px;padding:0 8px;-webkit-appearance:none;appearance:none}
+  .results{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .rp{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .rp .tag{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-weight:700;color:#0d1117}
+  .rp .times{font-size:24px;font-variant-numeric:tabular-nums;font-weight:500}
+  .rp .times .arrow{color:var(--dim);margin:0 8px}
+  .rp .dur{font-variant-numeric:tabular-nums;color:var(--dim);text-align:right}
+  .rp .dur b{display:block;color:var(--text);font-size:20px;font-weight:600}
+  .plus1{font-size:12px;color:var(--amber);vertical-align:super;margin-left:2px}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;color:var(--dim);font-size:14px}
+  .meta b{color:var(--text);font-variant-numeric:tabular-nums}
+  .err{color:var(--red);font-weight:600}
+  .bar{position:relative;height:34px;border-radius:8px;background:var(--bg);border:1px solid var(--line);overflow:hidden;margin-top:6px}
+  .bar div{position:absolute;top:0;bottom:0}
+  .bar .cap{background:repeating-linear-gradient(45deg,#2a333e 0 6px,#20272f 6px 12px)}
+  .ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-top:4px;font-variant-numeric:tabular-nums}
+
+  /* Scratchpad */
+  .pad{display:flex;flex-direction:column;flex:1;min-height:260px;padding:0;overflow:hidden}
+  .padbar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .padbar .label{flex:1;padding-left:6px}
+  .tool{min-width:44px;min-height:40px;border-radius:9px;background:transparent;border:1px solid transparent;color:var(--dim);font-size:14px;font-weight:600;padding:0 10px}
+  .tool.on{background:var(--panel2);border-color:var(--line);color:var(--text)}
+  .canvaswrap{position:relative;flex:1;min-height:220px}
+  canvas.ink{position:absolute;inset:0;width:100%;height:100%;touch-action:none;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    background-image:radial-gradient(circle,#232b35 1px,transparent 1.2px);background-size:22px 22px}
+  .hint{position:absolute;right:12px;bottom:8px;font-size:12px;color:#4b5563;pointer-events:none}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:20}
+  .modal.show{display:flex}
+  .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:360px;width:90%;text-align:center}
+  .modal .box p{margin:0 0 18px}
+</style>
+</head>
+<body>
+<header>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="stopwatch">Timer <i class="dot" id="dotSw"></i></button>
+    <button class="tab" role="tab" data-view="countdown">Countdown <i class="dot" id="dotCd"></i></button>
+    <button class="tab" role="tab" data-view="crew-rest">Crew Rest</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ TIMER (count up) ============ -->
+  <section class="view" id="view-stopwatch">
+    <div class="card">
+      <div class="label">Timer · counts up</div>
+      <div class="clock paused" id="swClock">0:00:00<small>.0</small></div>
+      <div class="sub" id="swSub">Starts from 0:00:00</div>
+      <div class="btns">
+        <button class="btn go" id="swStart">Start</button>
+        <button class="btn" id="swReset">Reset</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Start from</div>
+      <div class="hms" style="margin-top:12px">
+        <label class="field"><input class="num" id="swH" inputmode="numeric" pattern="[0-9]*" value="0"><span>hr</span></label>
+        <div class="colon">:</div>
+        <label class="field"><input class="num" id="swM" inputmode="numeric" pattern="[0-9]*" value="0"><span>min</span></label>
+        <div class="colon">:</div>
+        <label class="field"><input class="num" id="swS" inputmode="numeric" pattern="[0-9]*" value="0"><span>sec</span></label>
+        <button class="btn small" id="swSet" style="margin-left:6px;margin-bottom:22px">Set</button>
+      </div>
+    </div>
+    <div class="card pad" data-pad="stopwatch"></div>
+  </section>
+
+  <!-- ============ COUNTDOWN ============ -->
+  <section class="view" id="view-countdown">
+    <div class="card">
+      <div class="label">Countdown</div>
+      <div class="clock paused" id="cdClock">0:05:00</div>
+      <div class="sub" id="cdSub">Ready</div>
+      <div class="btns">
+        <button class="btn go" id="cdStart">Start</button>
+        <button class="btn" id="cdReset">Reset</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Set duration</div>
+      <div class="hms" style="margin-top:12px">
+        <label class="field"><input class="num" id="cdH" inputmode="numeric" pattern="[0-9]*" value="0"><span>hr</span></label>
+        <div class="colon">:</div>
+        <label class="field"><input class="num" id="cdM" inputmode="numeric" pattern="[0-9]*" value="5"><span>min</span></label>
+        <div class="colon">:</div>
+        <label class="field"><input class="num" id="cdS" inputmode="numeric" pattern="[0-9]*" value="0"><span>sec</span></label>
+        <button class="btn small" id="cdSet" style="margin-left:6px;margin-bottom:22px">Set</button>
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button class="btn small" data-add="60">+1 min</button>
+        <button class="btn small" data-add="300">+5 min</button>
+        <button class="btn small" data-add="600">+10 min</button>
+        <button class="btn small" data-add="1800">+30 min</button>
+      </div>
+    </div>
+    <div class="card pad" data-pad="countdown"></div>
+  </section>
+
+  <!-- ============ CREW REST ============ -->
+  <section class="view" id="view-crew-rest">
+    <div class="card">
+      <div class="grid2">
+        <div>
+          <div class="label" style="margin-bottom:8px">Take-off time</div>
+          <input type="time" class="num" id="crTo" value="00:00">
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:8px">Flight time</div>
+          <div class="row">
+            <label class="field"><input class="num" id="crFh" inputmode="numeric" pattern="[0-9]*" value="12"><span>hr</span></label>
+            <div class="colon">:</div>
+            <label class="field"><input class="num" id="crFm" inputmode="numeric" pattern="[0-9]*" value="00"><span>min</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="label" style="margin:16px 0 8px">Crew complement</div>
+      <div class="seg" id="crCrew">
+        <button data-n="2" class="on">Double crew · 2 rests</button>
+        <button data-n="3">Augmented · 3 rests</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="meta" id="crMeta"></div>
+      <div class="bar" id="crBar"></div>
+      <div class="ticks" id="crTicks"></div>
+      <div class="results" id="crOut" style="margin-top:14px"></div>
+    </div>
+    <div class="card pad" data-pad="crew"></div>
+  </section>
+</main>
+
+<div class="modal" id="alarmModal">
+  <div class="box">
+    <div class="label" style="margin-bottom:8px">Countdown</div>
+    <p style="font-size:22px;font-weight:600">Time's up</p>
+    <button class="btn stop" id="alarmOk" style="width:100%">Silence</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+    set(k, v){ try{ localStorage.setItem('fdt.'+k, JSON.stringify(v)); }catch(e){} }
+  };
+  const int = (el, max) => { let n = parseInt(el.value,10); if (isNaN(n)||n<0) n=0; if (max!=null&&n>max) n=max; return n; };
+  const pad2 = n => String(n).padStart(2,'0');
+
+  function fmt(ms, tenths){
+    const neg = ms < 0; ms = Math.abs(ms);
+    const totalS = Math.floor(ms/1000);
+    const h = Math.floor(totalS/3600), m = Math.floor(totalS%3600/60), s = totalS%60;
+    let out = (neg?'+':'') + h + ':' + pad2(m) + ':' + pad2(s);
+    if (tenths) out += '<small>.' + Math.floor(ms%1000/100) + '</small>';
+    return out;
+  }
+
+  /* ---------- Tabs (hash routing) ---------- */
+  const views = ['stopwatch','countdown','crew-rest'];
+  function show(name){
+    if (!views.includes(name)) name = store.get('tab','stopwatch');
+    if (!views.includes(name)) name = 'stopwatch';
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view===name));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id==='view-'+name));
+    store.set('tab', name);
+    requestAnimationFrame(() => pads.forEach(p => p.resize()));
+  }
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    if (location.hash !== '#'+t.dataset.view) location.hash = t.dataset.view; else show(t.dataset.view);
+  }));
+  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+
+  /* ---------- Audio + wake lock ---------- */
+  let actx = null;
+  function unlockAudio(){
+    try{
+      if (!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    }catch(e){}
+  }
+  function beep(freq=880, dur=.18, when=0){
+    if (!actx) return;
+    try{
+      const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+      o.type='square'; o.frequency.value=freq;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.25,t+.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t+dur+.02);
+    }catch(e){}
+  }
+  let wake = null;
+  async function updateWake(){
+    const need = sw.running || cd.running;
+    try{
+      if (need && !wake && navigator.wakeLock) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>wake=null); }
+      if (!need && wake) { await wake.release(); wake = null; }
+    }catch(e){ wake = null; }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState==='visible') { wake=null; updateWake(); } });
+
+  /* ---------- Timer (count up from custom start) ---------- */
+  const sw = store.get('sw', {startMs:0, baseMs:0, startedAt:null});
+  sw.running = sw.startedAt != null;
+  const swElapsed = () => sw.baseMs + (sw.running ? Date.now()-sw.startedAt : 0);
+  function swSave(){ store.set('sw', {startMs:sw.startMs, baseMs:sw.baseMs, startedAt:sw.running?sw.startedAt:null}); }
+  function swLoadInputs(){
+    const t = Math.floor(sw.startMs/1000);
+    $('swH').value = Math.floor(t/3600); $('swM').value = Math.floor(t%3600/60); $('swS').value = t%60;
+  }
+  $('swStart').onclick = () => {
+    unlockAudio();
+    if (sw.running){ sw.baseMs = swElapsed(); sw.running=false; sw.startedAt=null; }
+    else { sw.startedAt = Date.now(); sw.running = true; }
+    swSave(); swUI(); updateWake();
+  };
+  $('swReset').onclick = () => { sw.running=false; sw.startedAt=null; sw.baseMs = sw.startMs; swSave(); swUI(); updateWake(); };
+  $('swSet').onclick = () => {
+    sw.startMs = (int($('swH'))*3600 + int($('swM'),59)*60 + int($('swS'),59))*1000;
+    swLoadInputs();
+    sw.running=false; sw.startedAt=null; sw.baseMs = sw.startMs; swSave(); swUI(); updateWake();
+  };
+  function swUI(){
+    $('swStart').textContent = sw.running ? 'Pause' : (swElapsed() > sw.startMs ? 'Resume' : 'Start');
+    $('swStart').className = 'btn ' + (sw.running ? 'stop' : 'go');
+    $('swSub').textContent = 'Starts from ' + fmt(sw.startMs);
+    $('dotSw').classList.toggle('on', sw.running);
+  }
+
+  /* ---------- Countdown ---------- */
+  const cd = store.get('cd', {durMs:300000, baseMs:0, startedAt:null});
+  cd.running = cd.startedAt != null; cd.alarmed = false;
+  const cdElapsed = () => cd.baseMs + (cd.running ? Date.now()-cd.startedAt : 0);
+  const cdRemaining = () => cd.durMs - cdElapsed();
+  if (cd.running && cdRemaining() <= 0) cd.alarmed = true; // expired while away: don't blast alarm on reload
+  function cdSave(){ store.set('cd', {durMs:cd.durMs, baseMs:cd.baseMs, startedAt:cd.running?cd.startedAt:null}); }
+  function cdLoadInputs(){
+    const t = Math.floor(cd.durMs/1000);
+    $('cdH').value = Math.floor(t/3600); $('cdM').value = Math.floor(t%3600/60); $('cdS').value = t%60;
+  }
+  function cdSetDur(ms){
+    cd.durMs = Math.max(0, ms); cd.baseMs = 0; cd.running=false; cd.startedAt=null; cd.alarmed=false;
+    stopAlarm(); cdLoadInputs(); cdSave(); cdUI(); updateWake();
+  }
+  $('cdStart').onclick = () => {
+    unlockAudio();
+    if (cd.running){ cd.baseMs = cdElapsed(); cd.running=false; cd.startedAt=null; stopAlarm(); }
+    else { if (cdRemaining() <= 0 && cd.durMs>0) { cd.baseMs = 0; cd.alarmed=false; } cd.startedAt = Date.now(); cd.running = true; }
+    cdSave(); cdUI(); updateWake();
+  };
+  $('cdReset').onclick = () => cdSetDur(cd.durMs);
+  $('cdSet').onclick = () => cdSetDur((int($('cdH'))*3600 + int($('cdM'),59)*60 + int($('cdS'),59))*1000);
+  document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    const add = +b.dataset.add * 1000;
+    if (cd.running || cdElapsed() > 0) {          // add to a running/paused countdown
+      cd.durMs += add; if (cdRemaining() > 0) { cd.alarmed=false; stopAlarm(); }
+      const t = Math.floor(cd.durMs/1000); cdLoadInputs(); cdSave(); cdUI();
+    } else cdSetDur(cd.durMs + add);
+  });
+  function cdUI(){
+    const rem = cdRemaining();
+    $('cdStart').textContent = cd.running ? 'Pause' : (cdElapsed() > 0 && rem > 0 ? 'Resume' : 'Start');
+    $('cdStart').className = 'btn ' + (cd.running ? 'stop' : 'go');
+    $('dotCd').classList.toggle('on', cd.running);
+    $('dotCd').classList.toggle('alarm', cd.running && rem <= 0);
+  }
+
+  let alarmTimer = null;
+  function startAlarm(){
+    $('alarmModal').classList.add('show');
+    const ring = () => { beep(988,.15,0); beep(988,.15,.22); beep(988,.15,.44); };
+    ring(); clearInterval(alarmTimer); alarmTimer = setInterval(ring, 1400);
+    setTimeout(stopAlarm, 30000);
+  }
+  function stopAlarm(){ clearInterval(alarmTimer); alarmTimer=null; $('alarmModal').classList.remove('show'); }
+  $('alarmOk').onclick = stopAlarm;
+
+  /* ---------- Render loop ---------- */
+  function tick(){
+    const e = swElapsed();
+    $('swClock').innerHTML = fmt(e, true);
+    $('swClock').className = 'clock ' + (sw.running ? 'running' : 'paused');
+
+    const rem = cdRemaining();
+    if (cd.running && rem <= 0 && !cd.alarmed){ cd.alarmed = true; startAlarm(); }
+    const over = rem <= 0 && (cd.running || cdElapsed() > 0);
+    $('cdClock').innerHTML = over ? fmt(rem) : fmt(Math.ceil(rem/1000)*1000);
+    $('cdClock').className = 'clock ' + (over ? 'over' + (cd.running && alarmTimer ? ' flash':'') : cd.running ? 'running' : 'paused');
+    $('cdSub').textContent = over ? 'Overrun — counting up since zero' :
+      cd.running ? 'Ends at ' + new Date(Date.now()+rem).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) :
+      cdElapsed() > 0 ? 'Paused' : 'Ready · ' + fmt(cd.durMs);
+    cdUI();
+  }
+  (function loop(){ tick(); requestAnimationFrame(loop); })();
+  setInterval(tick, 500); // keeps the alarm check going if rAF is throttled
+
+  /* ---------- Crew rest ---------- */
+  const cr = store.get('cr', {to:'00:00', fh:12, fm:0, n:2});
+  $('crTo').value = cr.to; $('crFh').value = cr.fh; $('crFm').value = pad2(cr.fm);
+  const hhmm = mins => { const d = Math.floor(mins/1440), m = ((mins%1440)+1440)%1440;
+    return pad2(Math.floor(m/60)) + ':' + pad2(m%60) + (d>0 ? '<span class="plus1">+'+d+'</span>' : ''); };
+  const dur = mins => Math.floor(mins/60) + 'h ' + pad2(mins%60) + 'm';
+  const colors = ['var(--blue)','var(--violet)','var(--green)'];
+
+  function crCalc(){
+    const [th, tm] = ($('crTo').value || '00:00').split(':').map(Number);
+    const to = th*60 + tm;
+    const ft = int($('crFh'))*60 + int($('crFm'),59);
+    const n = +document.querySelector('#crCrew .on').dataset.n;
+    store.set('cr', {to: $('crTo').value || '00:00', fh:int($('crFh')), fm:int($('crFm'),59), n});
+
+    const land = to + ft, rs = to + 30, re = land - 60, W = re - rs;
+    $('crMeta').innerHTML = `<span>T/O <b>${hhmm(to)}</b></span><span>Landing <b>${hhmm(land)}</b></span>` +
+      (W>0 ? `<span>Rest window <b>${hhmm(rs)}–${hhmm(re)}</b> (${dur(W)})</span>` : '');
+    const out = $('crOut'), bar = $('crBar');
+    if (W <= 0){
+      out.innerHTML = `<div class="err">Flight time must be longer than 1h 30m to fit any rest.</div>`;
+      bar.innerHTML = ''; $('crTicks').innerHTML = ''; return;
+    }
+    const b = Array.from({length:n+1}, (_,i) => rs + Math.round(i*W/n));
+    const names = n===2 ? ['First rest','Second rest'] : ['First rest','Second rest','Third rest'];
+    out.innerHTML = names.map((nm,i) => `
+      <div class="rp">
+        <div class="tag" style="background:${colors[i]}">${i+1}</div>
+        <div><div class="label">${nm}</div><div class="times">${hhmm(b[i])}<span class="arrow">→</span>${hhmm(b[i+1])}</div></div>
+        <div class="dur"><b>${dur(b[i+1]-b[i])}</b>duration</div>
+      </div>`).join('');
+    const pct = m => ((m - to) / ft * 100).toFixed(3) + '%';
+    bar.innerHTML = `<div class="cap" style="left:0;width:${pct(rs)}"></div>` +
+      names.map((_,i)=>`<div style="left:${pct(b[i])};width:calc(${pct(b[i+1])} - ${pct(b[i])});background:${colors[i]};opacity:.85;border-left:2px solid var(--bg)"></div>`).join('') +
+      `<div class="cap" style="left:${pct(re)};right:0"></div>`;
+    $('crTicks').innerHTML = `<span>T/O ${hhmm(to)}</span><span>LDG ${hhmm(land)}</span>`;
+  }
+  ['crTo','crFh','crFm'].forEach(id => $(id).addEventListener('input', crCalc));
+  document.querySelectorAll('#crCrew button').forEach(btn => btn.onclick = () => {
+    document.querySelectorAll('#crCrew button').forEach(x => x.classList.toggle('on', x===btn)); crCalc();
+  });
+  document.querySelectorAll('#crCrew button').forEach(x => x.classList.toggle('on', +x.dataset.n === cr.n));
+
+  // select-all on focus for quick number entry
+  document.querySelectorAll('input.num:not([type=time])').forEach(i => i.addEventListener('focus', () => setTimeout(()=>i.select(),0)));
+
+  /* ---------- Scratchpads (Apple Pencil aware) ---------- */
+  let penSeen = store.get('penSeen', false);
+  class Pad {
+    constructor(el){
+      this.key = 'pad.' + el.dataset.pad;
+      this.strokes = store.get(this.key, []);
+      this.tool = 'pen'; this.cur = null;
+      el.innerHTML = `
+        <div class="padbar">
+          <div class="label">Scratchpad</div>
+          <button class="tool on" data-t="pen">Pen</button>
+          <button class="tool" data-t="eraser">Eraser</button>
+          <button class="tool" data-a="undo">Undo</button>
+          <button class="tool" data-a="clear">Clear</button>
+        </div>
+        <div class="canvaswrap"><canvas class="ink"></canvas><div class="hint"></div></div>`;
+      this.cv = el.querySelector('canvas'); this.ctx = this.cv.getContext('2d');
+      this.hint = el.querySelector('.hint');
+      el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+        this.tool = b.dataset.t; el.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x===b));
+      });
+      el.querySelector('[data-a=undo]').onclick = () => { this.strokes.pop(); this.save(); this.redraw(); };
+      let armed = false, armT;
+      const clr = el.querySelector('[data-a=clear]');
+      clr.onclick = () => {
+        if (!armed){ armed = true; clr.textContent = 'Tap again'; clr.style.color='var(--red)';
+          armT = setTimeout(()=>{armed=false; clr.textContent='Clear'; clr.style.color='';}, 2000); return; }
+        clearTimeout(armT); armed=false; clr.textContent='Clear'; clr.style.color='';
+        this.strokes = []; this.save(); this.redraw();
+      };
+      const cv = this.cv;
+      cv.addEventListener('pointerdown', e => this.down(e));
+      cv.addEventListener('pointermove', e => this.move(e));
+      ['pointerup','pointercancel','pointerleave'].forEach(t => cv.addEventListener(t, e => this.up(e)));
+      cv.addEventListener('touchstart', e => e.preventDefault(), {passive:false}); // stop iOS scroll/magnifier
+      this.updateHint();
+      new ResizeObserver(() => this.resize()).observe(cv);
+    }
+    updateHint(){ this.hint.textContent = penSeen ? 'Pencil only · palm rejection on' : 'Draw with finger or Pencil'; }
+    pt(e){ const r = this.cv.getBoundingClientRect(); const p = e.pointerType==='mouse' ? .5 : (e.pressure || .5);
+      return [+(e.clientX-r.left).toFixed(1), +(e.clientY-r.top).toFixed(1), +p.toFixed(2)]; }
+    down(e){
+      if (e.pointerType==='pen' && !penSeen){ penSeen = true; store.set('penSeen', true); pads.forEach(p=>p.updateHint()); }
+      if (penSeen && e.pointerType==='touch') return; // palm rejection once a Pencil has been used
+      e.preventDefault(); this.cv.setPointerCapture?.(e.pointerId);
+      this.cur = {t:this.tool, p:[this.pt(e)]}; this.strokes.push(this.cur);
+      this.drawSeg(this.cur, 0);
+    }
+    move(e){
+      if (!this.cur) return; e.preventDefault();
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      for (const ce of (evs.length?evs:[e])){ this.cur.p.push(this.pt(ce)); this.drawSeg(this.cur, this.cur.p.length-1); }
+    }
+    up(){ if (!this.cur) return; this.cur = null; this.save(); }
+    save(){ store.set(this.key, this.strokes); }
+    style(s, pr){
+      const c = this.ctx;
+      c.globalCompositeOperation = s.t==='eraser' ? 'destination-out' : 'source-over';
+      c.strokeStyle = '#e6edf3'; c.fillStyle = '#e6edf3';
+      c.lineWidth = s.t==='eraser' ? 26 : 1 + pr*2.6;
+      c.lineCap = 'round'; c.lineJoin = 'round';
+    }
+    drawSeg(s, i){
+      const c = this.ctx, p = s.p[i];
+      if (i === 0){ this.style(s, p[2]); c.beginPath(); c.arc(p[0],p[1],c.lineWidth/2,0,Math.PI*2); c.fill(); return; }
+      const q = s.p[i-1]; this.style(s, (p[2]+q[2])/2);
+      c.beginPath(); c.moveTo(q[0],q[1]); c.lineTo(p[0],p[1]); c.stroke();
+    }
+    resize(){
+      const r = this.cv.getBoundingClientRect(); if (!r.width) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.round(r.width*dpr), h = Math.round(r.height*dpr);
+      if (this.cv.width === w && this.cv.height === h) return;
+      this.cv.width = w; this.cv.height = h; this.ctx.setTransform(dpr,0,0,dpr,0,0); this.redraw();
+    }
+    redraw(){
+      const c = this.ctx; c.save(); c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,this.cv.width,this.cv.height); c.restore();
+      for (const s of this.strokes) for (let i=0;i<s.p.length;i++) this.drawSeg(s,i);
+      c.globalCompositeOperation = 'source-over';
+    }
+  }
+  const pads = [...document.querySelectorAll('[data-pad]')].map(el => new Pad(el));
+
+  /* ---------- Init ---------- */
+  swLoadInputs(); cdLoadInputs(); swUI(); cdUI(); crCalc();
+  show(location.hash.slice(1));
+  updateWake();
+
+  /* ---------- Offline support ---------- */
+  try{
+    if ('serviceWorker' in navigator && location.protocol === 'https:')
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
