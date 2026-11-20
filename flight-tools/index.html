@@ -416,7 +416,7 @@
   <!-- ============ COUNTDOWN ============ -->
   <section class="view" id="view-countdown">
     <div class="card">
-      <div class="label">Countdown to time · 24h</div>
+      <div class="label">Countdown to time · UTC (Z)</div>
       <div class="clock mid paused" id="ctClock">0:00:00</div>
       <div class="sub" id="ctSub">Pick a target time</div>
       <div class="btns" style="align-items:center">
@@ -1438,7 +1438,7 @@
     if (!crOfp.std || crOfp.ft == null || ct.target != null) return;   // never touch a running countdown
     const utcMin = +crOfp.std.slice(0,2) * 60 + +crOfp.std.slice(2) + crOfp.taxi + crOfp.ft;
     const d = new Date(); d.setUTCHours(0, 0, 0, 0); d.setUTCMinutes(utcMin);
-    ct.time = pad2(d.getHours()) + ':' + pad2(d.getMinutes()); ct.fromOfp = true;
+    ct.time = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); ct.fromOfp = true;
     $('ctTime').value = ct.time; $('ctTime').classList.remove('bad'); ctSave();
   }
   const crTaxiStep = k => { crOfp.taxi = Math.max(0, Math.min(120, crOfp.taxi + k)); store.set('crOfp', crOfp); crApplyTo(); };
@@ -1485,14 +1485,18 @@
   /* ---------- Countdown to a clock time ---------- */
   const ct = store.get('ct', {target:null, time:'', fromOfp:false});
   ct.alarmed = ct.target != null && Date.now() >= ct.target; // expired while away: no alarm on reopen
-  const hm = d => pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-  if (!ct.time){ const d = new Date(Date.now() + 30*60000); ct.time = hm(d); }
+  // All countdown-to-time values are UTC, to match the OFP
+  const hm = d => pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + 'Z';
+  const hmPlain = d => pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes());
+  if (ct.utc !== true){ ct.target = null; ct.time = ''; }   // older versions stored local time: start fresh
+  ct.utc = true;
+  if (!ct.time){ const d = new Date(Date.now() + 30*60000); ct.time = hmPlain(d); }
   $('ctTime').value = ct.time;
-  function ctSave(){ store.set('ct', {target:ct.target, time:ct.time, fromOfp:!!ct.fromOfp}); }
+  function ctSave(){ store.set('ct', {target:ct.target, time:ct.time, fromOfp:!!ct.fromOfp, utc:true}); }
   function ctTargetFrom(val){              // next occurrence of HH:MM (today, else tomorrow)
     const [h, m] = (val || '00:00').split(':').map(Number);
-    const t = new Date(); t.setHours(h, m, 0, 0);
-    if (t.getTime() <= Date.now()) t.setDate(t.getDate() + 1);
+    const t = new Date(); t.setUTCHours(h, m, 0, 0);
+    if (t.getTime() <= Date.now()) t.setUTCDate(t.getUTCDate() + 1);
     return t.getTime();
   }
   bind24($('ctTime'), v => { if (v && v !== ct.time){ ct.time = v; ct.fromOfp = false; ctSave(); } });
@@ -1506,7 +1510,7 @@
   function ctTick(){
     const now = Date.now(), run = ct.target != null;
     const target = run ? ct.target : ctTargetFrom(read24($('ctTime')) || ct.time);
-    const rem = target - now, tomorrow = new Date(target).toDateString() !== new Date(now).toDateString();
+    const rem = target - now, tomorrow = new Date(target).getUTCDate() !== new Date(now).getUTCDate();
     if (run && rem <= 0 && !ct.alarmed){ ct.alarmed = true; startAlarm('Reached ' + hm(new Date(ct.target))); }
     const over = run && rem <= 0;
     $('ctClock').innerHTML = over ? fmt(rem) : fmt(Math.ceil(rem/1000)*1000);
@@ -1685,7 +1689,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v42 · ' + w + '×' + h;
+    $('ver').textContent = 'v43 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
