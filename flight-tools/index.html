@@ -722,7 +722,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v48';   // bump with sw.js VERSION on every release
+  const APP_V = 'v49';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1826,17 +1826,14 @@
   appBar();
 
   /* ---------- Link tester: guess app link addresses ---------- */
-  const LINK_GUESSES = {
-    'FD pro':  ['flitedeckx.jeppesen://', 'flitedeckpro.jeppesen://', 'flitedeck.jeppesen://', 'jeppesen.flitedeck://', 'flitedeckpro://', 'flitedeck://', 'fdpro://', 'jeppfd://', 'jeppesen://'],
-    'OPT':     ['opt://', 'boeingopt://', 'boeing-opt://', 'onboardperformancetool://', 'opt-ios://', 'optios://', 'com.boeing.opt://'],
-    'eWAS':    ['ewas://', 'sitaewas://', 'sita-ewas://', 'ewaspilot://', 'ewas-pilot://', 'ewasapp://', 'com.sita.ewas://'],
-    'ELB':     ['elb://', 'elogbook://', 'e-logbook://', 'eltb://', 'techlog://', 'ultramain://', 'ultramainelb://', 'elbapp://'],
-    'Sign':    ['pilotsign://', 'pilot-sign://', 'pilotsignapp://', 'psign://', 'esign://'],
-    'Aviator': ['aviator://', 'aviatorapp://', 'boeingaviator://', 'jeppesenaviator://', 'lidoaviator://'],
-    'Pulse':   ['flightpulse://', 'flight-pulse://', 'flightpulseapp://', 'geflightpulse://', 'gefp://', 'fp://'],
-    'Orlando': ['orlando://', 'orlandoapp://', 'orlando-app://'],
-    'AXIS':    ['axis://', 'axisapp://', 'axis-app://', 'axisefb://']
+  // Guesses in the form sia.<appname>:// (plus close variants)
+  const SIA_NAMES = {
+    'FD pro': ['fdpro', 'flitedeck', 'flitedeckpro', 'fd'], 'OPT': ['opt'], 'eWAS': ['ewas'], 'ELB': ['elb'],
+    'Sign': ['pilotsign', 'sign'], 'Aviator': ['aviator'], 'Pulse': ['flightpulse', 'pulse'], 'Orlando': ['orlando'], 'AXIS': ['axis']
   };
+  const siaGuesses = names => names.flatMap(n => [`sia.${n}://`, `sia-${n}://`, `sia${n}://`, `com.sia.${n}://`, `com.singaporeair.${n}://`]);
+  const LINK_GUESSES = Object.fromEntries(Object.entries(SIA_NAMES).map(([l, ns]) => [l, siaGuesses(ns)]));
+  if (store.get('linkSet', 0) < 2){ store.set('linkTried', {}); store.set('linkSet', 2); }   // new guess list: clear the greyed-out marks
   let tried = store.get('linkTried', {});
   function openLink(url){ const a = document.createElement('a'); a.href = url; a.target = '_top'; document.body.appendChild(a); a.click(); a.remove(); }
   function linkRender(){
