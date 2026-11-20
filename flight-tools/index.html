@@ -702,7 +702,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v46';   // bump with sw.js VERSION on every release
+  const APP_V = 'v47';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1767,11 +1767,12 @@
   ];
   // Default buttons: [label, link]. "shortcut:Open X" runs the Shortcut named "Open X" (Shortcuts → Open App → X).
   const APP_DEFAULTS = [
-    ['FD pro','shortcut:Open FD Pro'], ['OPT','shortcut:Open OPT'], ['eWAS','shortcut:Open eWAS'], ['ELB','shortcut:Open ELB'],
+    ['FD pro','flitedeckx.jeppesen://'], ['OPT','shortcut:Open OPT'], ['eWAS','shortcut:Open eWAS'], ['ELB','shortcut:Open ELB'],
     ['Sign','shortcut:Open PilotSign'], ['Aviator','shortcut:Open Aviator'], ['Pulse','shortcut:Open FlightPulse'],
     ['Orlando','shortcut:Open Orlando'], ['AXIS','shortcut:Open AXIS']
   ];
   if (store.get('appsSet', 0) < 2){ store.set('apps', APP_DEFAULTS); store.set('appsSet', 2); }   // one-time switch to these defaults
+  if (store.get('appsSet', 0) < 3){ store.set('apps', store.get('apps', APP_DEFAULTS).map(([l, t]) => l === 'FD pro' && t === 'shortcut:Open FD Pro' ? [l, 'flitedeckx.jeppesen://'] : [l, t])); store.set('appsSet', 3); }
   let apps = store.get('apps', APP_DEFAULTS);
   let appOn = store.get('appOn', '');   // label of the last app opened from the bar (shown in yellow)
   const appHref = t => t.startsWith('shortcut:') ? 'shortcuts://run-shortcut?name=' + encodeURIComponent(t.slice(9).trim()) : t;
