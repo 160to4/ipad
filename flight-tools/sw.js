@@ -1,6 +1,6 @@
 // Flight Deck Tools — offline cache.
 // Bump VERSION whenever any file changes so devices pick up the update.
-const VERSION = 'fdt-v43';
+const VERSION = 'fdt-v44';
 const FILES = [
   './',
   './index.html',
@@ -40,3 +40,6 @@ self.addEventListener('fetch', e => {
   }
   e.respondWith(caches.match(req).then(hit => hit || fetch(req)));
 });
+
+// "Update app" button: let a waiting version take over straight away
+self.addEventListener('message', e => { if (e.data === 'skipWaiting') self.skipWaiting(); });

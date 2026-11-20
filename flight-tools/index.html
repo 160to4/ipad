@@ -109,6 +109,9 @@
   /* ---------- Header pad toggle ---------- */
   header{display:flex;align-items:center;gap:8px}
   header .tabs{flex:1}
+  .updbar{display:flex;align-items:center;gap:8px;padding:4px 8px;border-top:1px solid var(--line)}
+  .updbar .tool{min-height:32px;font-size:13px;color:var(--text)}
+  .updbar .unit{font-size:12px}
   .padbtn{display:none;flex:0 0 auto;width:44px;height:44px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:18px}
   .padbtn.on{color:var(--amber);border-color:var(--amber)}
   section.view{container-type:inline-size}
@@ -654,6 +657,7 @@
 <div id="ver" style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v19</div>
 <script>
 (() => {
+  const APP_V = 'v44';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1674,6 +1678,12 @@
     }
   }
   const pads = [...document.querySelectorAll('[data-pad]')].map(el => new Pad(el));
+  // "Update app" bar under the scratchpad
+  (() => {
+    const bar = document.createElement('div'); bar.className = 'updbar';
+    bar.innerHTML = `<button class="tool" id="appUpdate">↻ Update app</button><span class="unit" id="updMsg">${APP_V}</span>`;
+    document.querySelector('.card.pad').appendChild(bar);
+  })();
 
   /* ---------- Init ---------- */
   swLoadInputs(); cdLoadInputs(); swUI(); cdUI(); crCalc();
@@ -1689,7 +1699,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v43 · ' + w + '×' + h;
+    $('ver').textContent = APP_V + ' · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
@@ -1702,6 +1712,29 @@
   padUI(); fit();
   show(location.hash.slice(1));
   updateWake();
+
+  /* ---------- Update button ---------- */
+  $('appUpdate').onclick = async () => {
+    const msg = t => $('updMsg').textContent = t;
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller){ msg('Reloading…'); location.reload(); return; }
+    if (!navigator.onLine){ msg('Offline — connect to update'); return; }
+    msg('Checking…');
+    try{
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg){ location.reload(); return; }
+      await reg.update();
+      const nw = reg.installing || reg.waiting;
+      if (nw){
+        msg('Downloading update…');
+        if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+        nw.addEventListener('statechange', () => { if (nw.state === 'activated') location.reload(); });
+        setTimeout(() => location.reload(), 8000);   // safety net
+      } else {
+        msg(`Up to date ✓ ${APP_V}`);
+        setTimeout(() => msg(APP_V), 4000);
+      }
+    }catch(e){ msg('Couldn’t check — try again'); }
+  };
 
   /* ---------- Offline support ---------- */
   try{
