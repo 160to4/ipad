@@ -263,6 +263,16 @@
   .ofpf .v .sep{color:var(--dim);margin:0 6px}
   .ofpf.miss .v{color:#4b5563;font-size:14px;font-weight:400}
   .ofpf.wide{grid-column:1/-1}
+  .ofpf .v .adj{display:inline-flex;align-items:center;gap:4px;margin-left:10px;vertical-align:middle}
+  .adj button{width:34px;height:30px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:18px;line-height:1;padding:0}
+  .adj input{width:62px;height:30px;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:7px;font-size:15px;font-variant-numeric:tabular-nums}
+  .adj input.on{border-color:var(--amber);color:var(--amber)}
+  .adj .rst{width:auto;padding:0 8px;font-size:12px;color:var(--dim)}
+  .ofpf .v .new{color:var(--amber)}
+  .ofpf .v .arrow{color:var(--dim);margin:0 6px}
+  .ofpf .v .calc{display:block;font-size:12px;color:var(--dim);font-weight:400;margin-top:1px}
+  body.compact .adj button{width:30px;height:28px;font-size:16px} body.compact .adj input{width:54px;height:28px;font-size:13px}
+  body.compact .ofpf .v .adj{margin-left:6px}
   .ofphead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
   .ofphead .big{font-size:21px;font-weight:600}
   .ofphead .unit{font-size:14px}
@@ -1150,7 +1160,8 @@
           if (!o.ft) for (let k = 1; k <= 4 && i + k < items.length; k++){ const c = (items[i+k].str || '').trim(); if (/^\d{2}\.\d{2}$/.test(c)){ o.ft = c; break; } }
           if (p <= 4 && o.burn == null && items[i+4] && fuelKg(items[i+4].str)) o.burn = tonnes(items[i+4].str);
         }
-        if (upper.includes('FUEL IN TANKS') && o.fit == null && items[i+4] && fuelKg(items[i+4].str)) o.fit = tonnes(items[i+4].str);
+        if (upper.includes('FUEL IN TANKS') && o.fit == null && items[i+4] && fuelKg(items[i+4].str)){ o.fit = tonnes(items[i+4].str); o.fitKg = +fuelKg(items[i+4].str); }
+        if (p <= 4 && o.taxiKg == null && upper.includes('TAXI FUEL') && items[i+2] && fuelKg(items[i+2].str)) o.taxiKg = +fuelKg(items[i+2].str);
         if (upper.includes('ALTN FUEL') && o.altnFuel == null && items[i+4] && fuelKg(items[i+4].str)) o.altnFuel = items[i+4].str;
         if (upper.includes('ALTN HOLD') && o.altnHold == null && items[i+4] && fuelKg(items[i+4].str)) o.altnHold = items[i+4].str;
         if (upper.startsWith('ALTN') && !o.altn){
@@ -1161,8 +1172,8 @@
         }
         const cl = str.replace(/\s/g,'').toUpperCase();
         let m;
-        if (o.pzfw == null && (m = cl.match(/^PZFW(\d+)$/))) o.pzfw = tonnes(m[1]);
-        if (o.ptow == null && (m = cl.match(/^PTOW(\d+)$/))) o.ptow = tonnes(m[1]);
+        if (o.pzfw == null && (m = cl.match(/^PZFW(\d+)$/))){ o.pzfw = tonnes(m[1]); o.pzfwKg = +m[1]; }
+        if (o.ptow == null && (m = cl.match(/^PTOW(\d+)$/))){ o.ptow = tonnes(m[1]); o.ptowKg = +m[1]; }
         if ((upper.includes('BURN ADD') || upper.includes('BURN LESS')) && items[i+2] && items[i+2].str){
           const v = items[i+2].str.slice(0, 6).trim(); if (v) o.burnAdd.push({label: t, value: v});
         }
@@ -1198,11 +1209,12 @@
     if (!o.sta) o.sta = after(/SCHED\s+ARR/, /\b(\d{4})\b/, 4);
     if (!o.ft) o.ft = after(/BURNOFF/, /\b(\d{2}\.\d{2})\b/);
     if (o.burn == null){ const v = after(/BURNOFF/, /\b(\d{5,6})\b/, 4); if (v) o.burn = tonnes(v); }
-    if (o.fit == null){ const v = after(/FUEL\s+IN\s+TANKS/, /\b(\d{5,6})\b/); if (v) o.fit = tonnes(v); }
+    if (o.fit == null){ const v = after(/FUEL\s+IN\s+TANKS/, /\b(\d{5,6})\b/); if (v){ o.fit = tonnes(v); o.fitKg = +v; } }
+    if (o.taxiKg == null){ const v = after(/TAXI\s+FUEL/, /\b(\d{3,6})\b/, 4); if (v) o.taxiKg = +v; }
     if (o.altnFuel == null) o.altnFuel = after(/ALTN\s+FUEL/, /\b(\d{4,6})\b/);
     if (o.altnHold == null) o.altnHold = after(/ALTN\s+HOLD/, /\b(\d{4,6})\b/);
-    if (o.pzfw == null){ const v = after(/PZFW\s*/, /^(\d{5,6})/); if (v) o.pzfw = tonnes(v); }
-    if (o.ptow == null){ const v = after(/PTOW\s*/, /^(\d{5,6})/); if (v) o.ptow = tonnes(v); }
+    if (o.pzfw == null){ const v = after(/PZFW\s*/, /^(\d{5,6})/); if (v){ o.pzfw = tonnes(v); o.pzfwKg = +v; } }
+    if (o.ptow == null){ const v = after(/PTOW\s*/, /^(\d{5,6})/); if (v){ o.ptow = tonnes(v); o.ptowKg = +v; } }
     if (!o.burnAdd.length) L.forEach(({l}) => { const m = l.match(/(BURN\s+(?:ADD|LESS)\b[^]*?)\s+([+\-]?\d[\d.,]*\s*(?:KG|T)?)\s*$/i); if (m) o.burnAdd.push({label: m[1].trim(), value: m[2].trim()}); });
   }
 
@@ -1215,6 +1227,16 @@
   }
   const tn = v => v == null ? null : v.toFixed(1) + '<small>T</small>';
   // Burn add/less: "+450KG / -410KG", then "2000ft below: +XXXKG" on the next line.
+  function burnRates(list){
+    const r = {add: null, less: null};
+    (list || []).forEach(({label, value}) => {
+      const L = label.toUpperCase(), m = String(value).replace(/\s/g,'').match(/^([+\-]?)0*(\d+)/); if (!m) return;
+      if (/2000\s*(FT|')|BELOW|LOWER/.test(L)) return;
+      if (m[1] === '-' || (!m[1] && L.includes('LESS') && !L.includes('ADD'))){ if (r.less == null) r.less = +m[2]; }
+      else if (r.add == null) r.add = +m[2];
+    });
+    return r;
+  }
   function burnAddLess(list){
     if (!list || !list.length) return null;
     const num = v => { const m = String(v).replace(/\s/g,'').match(/^([+\-]?)0*(\d+)/); return m ? {sign: m[1], n: m[2]} : null; };
@@ -1242,6 +1264,32 @@
     const reg = d.reg || h.reg;
     const route = d.dep ? `${d.dep} → ${d.arr}` : (h.depI ? `${h.depI} → ${h.arrI}` : '');
     const ba = burnAddLess(d.burnAdd);
+    // PZFW adjustment (per OFP): extra fuel = change × burn add (or burn less when reducing), per 1000KG
+    const dz = (ofp.adj && ofp.adj[e.id]) || 0, rates = burnRates(d.burnAdd);
+    const up1 = kg => Math.ceil(Math.round(kg) / 100) / 10;   // kg → tonnes, rounded up to 0.1 like the annotator
+    const adjCtl = `<span class="adj"><button data-adj="-1" aria-label="PZFW minus 0.1">−</button><input id="ofpAdj" inputmode="decimal" value="${dz ? (dz > 0 ? '+' : '') + dz.toFixed(1) : '0.0'}" class="${dz ? 'on' : ''}" aria-label="PZFW change in tonnes"><button data-adj="1" aria-label="PZFW plus 0.1">+</button>${dz ? '<button class="rst" data-adj="0">Reset</button>' : ''}</span>`;
+    let fitV = tn(d.fit), ptowV = tn(d.ptow);
+    if (dz){
+      const rate = dz > 0 ? rates.add : rates.less;
+      if (rate == null){
+        fitV = (tn(d.fit) || '—') + `<span class="calc">No burn ${dz > 0 ? 'add' : 'less'} figure in this OFP — can’t adjust fuel.</span>`;
+      } else {
+        const extraKg = dz > 0 ? dz * rate : -Math.abs(dz) * rate;
+        const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
+        if (fitKg != null){
+          const nf = up1(fitKg + extraKg);
+          fitV = `${tn(d.fit)}<span class="arrow">→</span><span class="new">${nf.toFixed(1)}<small>T</small></span><span class="calc">${extraKg >= 0 ? '+' : '−'}${Math.round(Math.abs(extraKg))}KG (${dz > 0 ? '+' : ''}${dz.toFixed(1)}T × ${rate}KG per 1000KG)</span>`;
+        }
+        const ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
+        if (ptowKg != null){
+          const taxi = d.taxiKg != null ? d.taxiKg : null;
+          const np = up1(ptowKg + dz * 1000 + extraKg + (taxi || 0));
+          const parts = [(ptowKg/1000).toFixed(1), `${dz > 0 ? '+' : '−'} ${Math.abs(dz).toFixed(1)}`, `${extraKg >= 0 ? '+' : '−'} ${(Math.abs(extraKg)/1000).toFixed(3)} fuel`];
+          if (taxi != null) parts.push(`+ ${(taxi/1000).toFixed(1)} taxi`);
+          ptowV = `${tn(d.ptow)}<span class="arrow">→</span><span class="new">${np.toFixed(1)}<small>T</small></span><span class="calc">${parts.join(' ')}${taxi == null ? ' · taxi fuel not found (reopen the OFP)' : ''}</span>`;
+        }
+      }
+    }
     box.innerHTML = `
       <div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}</span></div>
       <div class="ofpgrid">
@@ -1249,14 +1297,23 @@
         ${ofpField('Reg · APD', [reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>') || null)}
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}` : null)}
         ${ofpField('Flight time', d.ft ? d.ft.replace('.', ':') : null)}
-        ${ofpField('PZFW', tn(d.pzfw))}
-        ${ofpField('PTOW', tn(d.ptow))}
+        ${ofpField('PZFW', d.pzfw == null ? null : tn(d.pzfw) + adjCtl)}
+        ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', tn(d.burn))}
         ${ofpField('Reserves · ALTN', d.reserves != null || d.altn ? `${tn(d.reserves) || '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}` : null)}
-        ${ofpField('Fuel in tanks', tn(d.fit))}
+        ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn add / less', ba)}
       </div>`;
     $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
+    // stepper events
+    const setAdj = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.adj = ofp.adj || {}; if (v) ofp.adj[e.id] = v; else delete ofp.adj[e.id]; store.set('ofp', ofp); ofpRender(); };
+    box.querySelectorAll('[data-adj]').forEach(b => b.onclick = () => { const k = +b.dataset.adj; setAdj(k === 0 ? 0 : dz + k * 0.1); });
+    const inp = $('ofpAdj');
+    if (inp){
+      inp.addEventListener('focus', () => setTimeout(() => inp.select(), 0));
+      inp.addEventListener('change', () => { const v = parseFloat(inp.value.replace(/[^\d.\-+]/g, '')); setAdj(isNaN(v) ? 0 : v); });
+      inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
+    }
   }
   $('ofpFile').addEventListener('change', async ev => {
     const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
@@ -1491,7 +1548,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v29 · ' + w + '×' + h;
+    $('ver').textContent = 'v30 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
