@@ -221,6 +221,15 @@
   .arow input{flex:1;min-width:0;height:38px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:14px}
   .arow input.lbl{flex:0 0 120px}
   .arow button{width:38px;height:38px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:16px;padding:0}
+  .lrow{border-top:1px solid var(--line);padding:8px 0}
+  .lrow .lname{font-weight:700;font-size:14px;margin-bottom:6px}
+  .lrow .lname small{color:var(--dim);font-weight:400;margin-left:6px}
+  .lchips{display:flex;flex-wrap:wrap;gap:6px}
+  .lchip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .lchip a{padding:6px 9px;font:13px ui-monospace,monospace;color:var(--text);text-decoration:none;background:var(--bg)}
+  .lchip a.tried{color:var(--dim)}
+  .lchip button{border:0;border-left:1px solid var(--line);background:#1f6f3a;color:#fff;font-size:12px;font-weight:700;padding:6px 9px}
+  .lchip.cur a{color:var(--amber)}
   .appbox code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
 
   /* ---------- Narrow tool column (container queries) ---------- */
@@ -674,6 +683,17 @@
   <button class="appedit" id="appEdit" aria-label="Edit app buttons">Edit</button>
 </footer>
 
+<div class="modal" id="linkModal">
+  <div class="box appbox">
+    <div class="label" style="margin-bottom:6px">Find link addresses</div>
+    <p class="unit" style="text-align:left;margin:0 0 10px;line-height:1.45">Tap a guess to test it. If the right app opens, come back and tap <b>Use</b> next to it.
+      A wrong guess just shows an error (or opens a different app — then it's not the one).</p>
+    <div id="linkRows"></div>
+    <div class="arow" style="margin-top:10px"><input class="lnk" id="linkOwn" placeholder="Try your own, e.g. myapp://" autocapitalize="off" autocorrect="off" spellcheck="false"><button id="linkOwnTest" style="width:auto;padding:0 12px">Test</button></div>
+    <div class="btns" style="justify-content:flex-end"><button class="btn small go" id="linkDone">Done</button></div>
+  </div>
+</div>
+
 <div class="modal" id="appModal">
   <div class="box appbox">
     <div class="label" style="margin-bottom:8px">App buttons</div>
@@ -687,7 +707,7 @@
       (Shortcuts → + → <i>Open App</i> → pick the app, name it e.g. <b>Open EFB</b>) and type <code>shortcut:Open EFB</code>.
       iPadOS decides where the app opens.
     </p>
-    <div class="btns" style="justify-content:flex-end"><button class="btn small ghost" id="appCancel">Cancel</button><button class="btn small go" id="appSave">Save</button></div>
+    <div class="btns" style="justify-content:space-between"><button class="btn small" id="appFind">Find links…</button><span style="display:flex;gap:8px"><button class="btn small ghost" id="appCancel">Cancel</button><button class="btn small go" id="appSave">Save</button></span></div>
   </div>
 </div>
 
@@ -702,7 +722,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v47';   // bump with sw.js VERSION on every release
+  const APP_V = 'v48';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1804,6 +1824,38 @@
     store.set('apps', apps); appBar(); $('appModal').classList.remove('show');
   };
   appBar();
+
+  /* ---------- Link tester: guess app link addresses ---------- */
+  const LINK_GUESSES = {
+    'FD pro':  ['flitedeckx.jeppesen://', 'flitedeckpro.jeppesen://', 'flitedeck.jeppesen://', 'jeppesen.flitedeck://', 'flitedeckpro://', 'flitedeck://', 'fdpro://', 'jeppfd://', 'jeppesen://'],
+    'OPT':     ['opt://', 'boeingopt://', 'boeing-opt://', 'onboardperformancetool://', 'opt-ios://', 'optios://', 'com.boeing.opt://'],
+    'eWAS':    ['ewas://', 'sitaewas://', 'sita-ewas://', 'ewaspilot://', 'ewas-pilot://', 'ewasapp://', 'com.sita.ewas://'],
+    'ELB':     ['elb://', 'elogbook://', 'e-logbook://', 'eltb://', 'techlog://', 'ultramain://', 'ultramainelb://', 'elbapp://'],
+    'Sign':    ['pilotsign://', 'pilot-sign://', 'pilotsignapp://', 'psign://', 'esign://'],
+    'Aviator': ['aviator://', 'aviatorapp://', 'boeingaviator://', 'jeppesenaviator://', 'lidoaviator://'],
+    'Pulse':   ['flightpulse://', 'flight-pulse://', 'flightpulseapp://', 'geflightpulse://', 'gefp://', 'fp://'],
+    'Orlando': ['orlando://', 'orlandoapp://', 'orlando-app://'],
+    'AXIS':    ['axis://', 'axisapp://', 'axis-app://', 'axisefb://']
+  };
+  let tried = store.get('linkTried', {});
+  function openLink(url){ const a = document.createElement('a'); a.href = url; a.target = '_top'; document.body.appendChild(a); a.click(); a.remove(); }
+  function linkRender(){
+    const labels = apps.map(a => a[0]);
+    const names = Object.keys(LINK_GUESSES).filter(l => labels.includes(l)).concat(labels.filter(l => !LINK_GUESSES[l]));
+    $('linkRows').innerHTML = names.map(l => {
+      const cur = (apps.find(a => a[0] === l) || [])[1] || '';
+      const guesses = (LINK_GUESSES[l] || [l.toLowerCase().replace(/[^a-z0-9]/g,'') + '://']);
+      return `<div class="lrow"><div class="lname">${esc(l)}<small>now: ${esc(cur)}</small></div><div class="lchips">${guesses.map(g =>
+        `<span class="lchip${g === cur ? ' cur' : ''}"><a href="${esc(g)}" data-g="${esc(g)}" class="${tried[g] ? 'tried' : ''}">${esc(g)}</a><button data-use="${esc(g)}" data-l="${esc(l)}">Use</button></span>`).join('')}</div></div>`;
+    }).join('');
+    $('linkRows').querySelectorAll('a[data-g]').forEach(a => a.addEventListener('click', () => { tried[a.dataset.g] = 1; store.set('linkTried', tried); a.classList.add('tried'); }));
+    $('linkRows').querySelectorAll('[data-use]').forEach(b => b.onclick = () => {
+      apps = apps.map(([l, t]) => l === b.dataset.l ? [l, b.dataset.use] : [l, t]); store.set('apps', apps); appBar(); appRows(apps); linkRender();
+    });
+  }
+  $('appFind').onclick = () => { $('appModal').classList.remove('show'); linkRender(); $('linkModal').classList.add('show'); };
+  $('linkDone').onclick = () => { $('linkModal').classList.remove('show'); };
+  $('linkOwnTest').onclick = () => { const v = $('linkOwn').value.trim(); if (okLink(v)) openLink(v); };
 
   /* ---------- Update button ---------- */
   $('appUpdate').onclick = async () => {
