@@ -1395,6 +1395,7 @@
     box.innerHTML = `
       <div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}${planNo ? ' · PLAN ' + ofpEsc(planNo) : ''}</span></div>
       <div class="ofpgrid">
+        ${ofpField('Flight', flt || h.depI ? [flt ? hlB(ofpEsc(flt.replace(/\s+/g, ''))) : '', h.depI ? hlB(ofpEsc(h.depI + '-' + h.arrI)) : (d.dep ? hlB(ofpEsc(d.dep + '-' + d.arr)) : '')].filter(Boolean).join(' ') : null)}
         ${ofpField('Reg · APD', ([reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>') || null) && [reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>'))}
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}${blk != null ? `<span class="br">(${hm(blk)})</span>` : ''}` : null)}
         ${ofpField('Flight time', d.ft ? d.ft.replace('.', ':') + (net != null ? `<span class="br">(NET ${net < 0 ? '−' : ''}${hm(Math.abs(net))})</span>` : '') : null)}
@@ -1675,7 +1676,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v40 · ' + w + '×' + h;
+    $('ver').textContent = 'v41 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
