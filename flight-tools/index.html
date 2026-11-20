@@ -269,6 +269,11 @@
   .adj input.on{border-color:var(--amber);color:var(--amber)}
   .adj .rst{width:auto;padding:0 8px;font-size:12px;color:var(--dim)}
   .ofpf .v .new{color:var(--amber)}
+  .bn{color:var(--amber);font-weight:700}
+  .ofpf .k .bn{margin-right:4px;font-size:11px}
+  .ofpf .v .bn{font-size:.8em;margin-left:6px}
+  .ofpf.route .hl{color:var(--amber);font-weight:600}
+  #ofpBrief.on{background:#3a2a0a;border-color:var(--amber);color:#ffd58a}
   .ofpf .v .br{color:var(--dim);font-weight:400;font-size:.88em;margin-left:6px}
   .ofpf.route .v{font-size:13px;font-weight:400;line-height:1.45;letter-spacing:.01em;word-spacing:2px}
   .ofpf .v .arrow{color:var(--dim);margin:0 6px}
@@ -612,6 +617,7 @@
         <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
         <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
         <button class="btn small" id="ofpRoute" style="display:none" title="Set DEP/DEST on the PA and Notes tabs">Use route</button>
+        <button class="btn small" id="ofpBrief" style="display:none">BRIEF</button>
         <div class="nmeta" id="ofpMeta">Pick an annotated OFP PDF from Files.</div>
       </div>
     </div>
@@ -1176,6 +1182,8 @@
           if (!m) for (let j = 1; j < near.length; j++){ const c = near[j].replace(/[^A-Z0-9]/gi,'').toUpperCase(); if (/^[A-Z]{4}$/.test(c)){ m = [c, c]; break; } }
           if (m) o.altn = m[1].toUpperCase();
         }
+        // Initial cruise FL: level-profile line "SIN/310/SURGA/330/..." — first level after the departure (annotator rule)
+        if (!o.fl && p <= 4){ const cm = str.match(/^\s*([A-Z]{3,4})\/(\d{3})\/[A-Z0-9]/); if (cm) o.fl = cm[2]; }
         const cl = str.replace(/\s/g,'').toUpperCase();
         let m;
         if (o.pzfw == null && (m = cl.match(/^PZFW(\d+)$/))){ o.pzfw = tonnes(m[1]); o.pzfwKg = +m[1]; }
@@ -1244,6 +1252,11 @@
     if (!o.ft) o.ft = after(/BURNOFF/, /\b(\d{2}\.\d{2})\b/);
     if (o.burn == null){ const v = after(/BURNOFF/, /\b(\d{5,6})\b/, 4); if (v) o.burn = tonnes(v); }
     if (o.fit == null){ const v = after(/FUEL\s+IN\s+TANKS/, /\b(\d{5,6})\b/); if (v){ o.fit = tonnes(v); o.fitKg = +v; } }
+    if (!o.fl){ for (const {p, l} of L){ if (p > 4) break; const cm = l.match(/(?:^|\s)([A-Z]{3,4})\/(\d{3})\/[A-Z0-9]/); if (cm){ o.fl = cm[2]; break; } } }
+    if (o.ci == null){
+      const pats = [/\bCOST\s*INDEX\s*[:\/=]?\s*(\d{1,4})\b/i, /\b(?:CRZ|CRUISE)\s*CI\s*[:\/=]?\s*(\d{1,4})\b/i, /\bCI\s*[:\/=]\s*(\d{1,4})\b/, /\bCI\s+(\d{1,4})\b/];
+      for (const re of pats){ for (const {p, l} of L){ if (p > 4) continue; const m = l.match(re); if (m){ o.ci = m[1]; break; } } if (o.ci != null) break; }
+    }
     if (o.cont == null){ const v = after(/^CONT\w*\b/, /\b(\d{6})\b/, 4); if (v) o.cont = tonnes(v); }
     if (o.excess == null){ const v = after(/EXCESS\s+FUEL(?!\s*:)/, /\b(\d{6})\b/); if (v) o.excess = tonnes(v); }
     if (o.taxiKg == null){ const v = after(/TAXI\s+FUEL/, /\b(\d{3,6})\b/, 4); if (v) o.taxiKg = +v; }
@@ -1257,12 +1270,29 @@
   let ofp = store.get('ofp', {recent: [], cur: null});
   const ofpEsc = v => esc(String(v));
   const hhmmZ = v => v ? v.slice(0,2) + ':' + v.slice(2) + '<small>Z</small>' : null;
-  function ofpField(k, v, wide, cls){
+  function ofpField(k, v, wide, cls, num){
     const miss = v == null || v === '';
-    return `<div class="ofpf${miss ? ' miss' : ''}${wide ? ' wide' : ''}${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${miss ? 'not found' : v}</div></div>`;
+    return `<div class="ofpf${miss ? ' miss' : ''}${wide ? ' wide' : ''}${cls ? ' ' + cls : ''}"><div class="k">${num ? `<span class="bn">(${num})</span>` : ''}${k}</div><div class="v">${miss ? 'not found' : v}</div></div>`;
   }
   const tn = v => v == null ? null : v.toFixed(1) + '<small>T</small>';
   // Burn add/less: "+450KG / -410KG", then "2000ft below: +XXXKG" on the next line.
+  // BRIEF route highlights: first waypoint; each airway once plus the waypoint after its last consecutive repeat; DCT + the next waypoint.
+  function routeHighlights(route){
+    const toks = route.trim().split(/\s+/), base = t => t.replace(/\/.*$/, '');
+    const isApt = (t, i) => (i === 0 || i === toks.length - 1) && /^[A-Z]{4}$/.test(base(t));
+    const isAwy = t => /^[A-Z]{1,2}\d{1,4}[A-Z]?$/.test(base(t));
+    const isProc = t => !isAwy(t) && /^[A-Z]{3,6}\d[A-Z]?$/.test(base(t));     // SID / STAR names like LOGAN2H
+    const isWpt = (t, i) => t && !isApt(t, i) && !isAwy(t) && !isProc(t) && base(t) !== 'DCT';
+    const hl = toks.map(() => false);
+    const first = toks.findIndex((t, i) => isWpt(t, i)); if (first >= 0) hl[first] = true;
+    toks.forEach((t, i) => {
+      if (base(t) === 'DCT'){ hl[i] = true; if (isWpt(toks[i+1], i+1)) hl[i+1] = true; return; }
+      if (!isAwy(t)) return;
+      if (!(i >= 2 && base(toks[i-2]) === base(t))) hl[i] = true;                 // first of a run of the same airway
+      if (isWpt(toks[i+1], i+1) && !(toks[i+2] && base(toks[i+2]) === base(t))) hl[i+1] = true;   // exit waypoint after the last repeat
+    });
+    return toks.map((t, i) => hl[i] ? `<span class="hl">${esc(t)}</span>` : esc(t)).join(' ');
+  }
   function burnRates(list){
     const r = {add: null, less: null};
     (list || []).forEach(({label, value}) => {
@@ -1293,13 +1323,15 @@
     $('ofpRecent').innerHTML = ofp.recent.length ? ofp.recent.map(r => `<option value="${r.id}">${ofpEsc(r.label)}</option>`).join('') : '<option value="">No OFPs loaded yet</option>';
     $('ofpRecent').value = ofp.cur || '';
     $('ofpRecent').style.display = ofp.recent.length ? '' : 'none';
-    if (!e){ box.innerHTML = '<div class="nempty">Tap <b>Open OFP…</b> and choose an annotated OFP PDF from Files. The key figures appear here and stay saved on this iPad.</div>'; $('ofpRoute').style.display = 'none'; return; }
+    if (!e){ $('ofpBrief').style.display = 'none'; box.innerHTML = '<div class="nempty">Tap <b>Open OFP…</b> and choose an annotated OFP PDF from Files. The key figures appear here and stay saved on this iPad.</div>'; $('ofpRoute').style.display = 'none'; return; }
     const d = e.data, h = d.hdr || {};
     const flt = d.flight || (h.flt ? 'SIA ' + h.flt : null);
     const plan = d.plan || (h.ofp ? 'OFP ' + h.ofp : null);
     const reg = d.reg || h.reg;
     const route = d.dep ? `${d.dep} → ${d.arr}` : (h.depI ? `${h.depI} → ${h.arrI}` : '');
     const ba = burnAddLess(d.burnAdd);
+    const brief = !!ofp.brief;
+    $('ofpBrief').style.display = ''; $('ofpBrief').classList.toggle('on', brief);
     const planNo = plan ? String(plan).replace(/^(PLAN|OFP)\s*/i, '') : null;
     const toMin = t => +t.slice(0,2) * 60 + +t.slice(2,4);
     const hm = m => Math.floor(m / 60) + ':' + pad2(m % 60);
@@ -1336,18 +1368,19 @@
       }
     }
     box.innerHTML = `
-      <div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}${planNo ? ' · ' + ofpEsc(planNo) : ''}</span></div>
+      <div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}${planNo ? ' · PLAN ' + ofpEsc(planNo) : ''}</span></div>
       <div class="ofpgrid">
-        ${ofpField('Reg · APD', [reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>') || null)}
+        ${ofpField('Reg · APD', ([reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>') || null) && [reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>') + (brief ? '<span class="bn">(4)</span>' : ''))}
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}${blk != null ? `<span class="br">(${hm(blk)})</span>` : ''}` : null)}
         ${ofpField('Flight time', d.ft ? d.ft.replace('.', ':') + (net != null ? `<span class="br">(NET ${net < 0 ? '−' : ''}${hm(Math.abs(net))})</span>` : '') : null)}
-        ${ofpField('PZFW', d.pzfw == null ? null : pzfwV + adjCtl)}
+        ${ofpField('FL · CI', d.fl || d.ci != null ? `${d.fl ? 'FL' + ofpEsc(d.fl) : '—'}<span class="sep">·</span>COST INDEX: ${d.ci != null ? ofpEsc(d.ci) : '—'}${brief ? '<span class="bn">(5)</span>' : ''}` : null, false, '', brief ? 3 : 0)}
+        ${ofpField('PZFW', d.pzfw == null ? null : pzfwV + adjCtl, false, '', brief ? 1 : 0)}
         ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', d.burn == null ? null : tn(d.burn) + (ldg != null ? `<span class="br">(LDG ${ldg.toFixed(1)}T)</span>` : ''))}
-        ${ofpField('Reserves · ALTN', d.reserves != null || d.altn ? `${tn(d.reserves) || '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null)}
+        ${ofpField('Reserves · ALTN', d.reserves != null || d.altn ? `${tn(d.reserves) || '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
         ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn add / less', ba)}
-        ${ofpField('Route', d.route1 || d.route ? ofpEsc(d.route1 || d.route) : null, false, 'route')}
+        ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
       </div>`;
     $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
     // stepper events
@@ -1371,7 +1404,7 @@
       const id = String(Date.now());
       ofp.recent = [{id, label, name: f.name, at: Date.now(), data: d}, ...ofp.recent.filter(r => r.label !== label)].slice(0, 10);
       ofp.cur = id; store.set('ofp', ofp);
-      const keys = ['flight','plan','reg','apd','std','sta','ft','pzfw','ptow','burn','cont','excess','reserves','altn','fit','taxiKg','route'];
+      const keys = ['flight','plan','reg','apd','std','sta','ft','fl','ci','pzfw','ptow','burn','cont','excess','reserves','altn','fit','taxiKg','route'];
       const found = keys.filter(k => k === 'route' ? (d.route1 || d.route) : d[k] != null && d[k] !== '').length;
       $('ofpMeta').textContent = `${f.name} · ${d.pages} pages · ${found}/${keys.length} values found`;
       ofpRender();
@@ -1381,6 +1414,7 @@
   });
   $('ofpRecent').addEventListener('change', () => { ofp.cur = $('ofpRecent').value; store.set('ofp', ofp); ofpRender();
     const e = ofp.recent.find(r => r.id === ofp.cur); if (e) $('ofpMeta').textContent = e.name; });
+  $('ofpBrief').onclick = () => { ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpRender(); };
   $('ofpRoute').onclick = () => {
     const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
     nSet(e.data.dep, e.data.arr);
@@ -1594,7 +1628,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v32 · ' + w + '×' + h;
+    $('ver').textContent = 'v33 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
