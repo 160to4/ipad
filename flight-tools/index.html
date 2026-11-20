@@ -99,6 +99,21 @@
   .meta b{color:var(--text);font-variant-numeric:tabular-nums}
   .err{color:var(--red);font-weight:600}
 
+  /* Calculator */
+  .calc{max-width:560px;width:100%;margin:0 auto}
+  .cdisp{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;text-align:right;margin-bottom:12px}
+  .chist{font-size:15px;color:var(--dim);min-height:20px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cexpr{font-size:clamp(34px,6vw,48px);font-variant-numeric:tabular-nums;font-weight:300;word-break:break-all;line-height:1.15}
+  .cprev{font-size:20px;color:var(--dim);min-height:26px;font-variant-numeric:tabular-nums}
+  .cexpr.err{color:var(--red)}
+  .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .key{height:64px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);font-size:26px;font-weight:500}
+  .key:active{transform:scale(.96);filter:brightness(1.3)}
+  .key.fn{color:var(--dim);font-size:22px}
+  .key.op{color:var(--amber);font-size:30px}
+  .key.eq{background:#3a2a0a;border-color:var(--amber);color:#ffd58a;font-size:30px}
+  .key.on{border-color:var(--amber)}
+
   /* PA */
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{min-height:44px;padding:0 16px;border-radius:22px;background:var(--bg);border:1px solid var(--line);color:var(--dim);font-weight:600;font-size:15px}
@@ -167,6 +182,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-view="stopwatch">Timer <i class="dot" id="dotSw"></i></button>
     <button class="tab" role="tab" data-view="countdown">Countdown <i class="dot" id="dotCd"></i></button>
+    <button class="tab" role="tab" data-view="calc">Calc</button>
     <button class="tab" role="tab" data-view="crew-rest">Crew Rest</button>
     <button class="tab" role="tab" data-view="pa">PA</button>
   </nav>
@@ -227,6 +243,33 @@
         <div class="colon">:</div>
         <label class="field"><input class="num" id="cdS" inputmode="numeric" pattern="[0-9]*" value="0"><span>sec</span></label>
         <button class="btn small" id="cdSet" style="margin-left:6px;margin-bottom:22px">Set</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CALCULATOR ============ -->
+  <section class="view" id="view-calc">
+    <div class="card calc">
+      <div class="cdisp">
+        <div class="chist" id="calcHist">&nbsp;</div>
+        <div class="cexpr" id="calcExpr">0</div>
+        <div class="cprev" id="calcPrev">&nbsp;</div>
+      </div>
+      <div class="keys" id="calcKeys">
+        <button class="key fn" data-k="C">C</button>
+        <button class="key fn" data-k="back">⌫</button>
+        <button class="key fn" data-k="%">%</button>
+        <button class="key op" data-k="/">÷</button>
+        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+        <button class="key op" data-k="*">×</button>
+        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+        <button class="key op" data-k="-">−</button>
+        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+        <button class="key op" data-k="+">+</button>
+        <button class="key fn" data-k="neg">±</button>
+        <button class="key" data-k="0">0</button>
+        <button class="key" data-k=".">.</button>
+        <button class="key eq" data-k="=">=</button>
       </div>
     </div>
   </section>
@@ -351,7 +394,7 @@
   </div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v17</div>
+<div style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v18</div>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -395,7 +438,7 @@
   }
 
   /* ---------- Tabs (hash routing) ---------- */
-  const views = ['stopwatch','countdown','crew-rest','pa'];
+  const views = ['stopwatch','countdown','calc','crew-rest','pa'];
   function show(name){
     if (!views.includes(name)) name = store.get('tab','stopwatch');
     if (!views.includes(name)) name = 'stopwatch';
@@ -514,6 +557,96 @@
   }
   function stopAlarm(){ clearInterval(alarmTimer); alarmTimer=null; $('alarmModal').classList.remove('show'); }
   $('alarmOk').onclick = stopAlarm;
+
+  /* ---------- Calculator ---------- */
+  // tokens: numbers as strings, operators as '+','-','*','/'. Standard precedence (× ÷ before + −).
+  const calc = {t: [], hist: '', done: false, err: false};
+  const isOp = x => ['+','-','*','/'].includes(x);
+  const OPSYM = {'+':'+','-':'−','*':'×','/':'÷'};
+  const fmtNum = str => {
+    if (str === '' || str === '-') return str;
+    const neg = str.startsWith('-'), body = neg ? str.slice(1) : str;
+    const [i, d] = body.split('.');
+    const int = (i || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (neg ? '−' : '') + int + (d !== undefined ? '.' + d : '');
+  };
+  const clean = n => { const r = parseFloat(n.toPrecision(12)); return Object.is(r, -0) ? 0 : r; };
+  function evalTokens(tk){
+    tk = tk.slice(); while (tk.length && isOp(tk[tk.length-1])) tk.pop();
+    if (!tk.length) return null;
+    const nums = [parseFloat(tk[0])], ops = [];
+    for (let i = 1; i < tk.length; i += 2){
+      const op = tk[i], n = parseFloat(tk[i+1]);
+      if (op === '*') nums.push(nums.pop() * n);
+      else if (op === '/'){ if (n === 0) return NaN; nums.push(nums.pop() / n); }
+      else { ops.push(op); nums.push(n); }
+    }
+    let r = nums[0]; ops.forEach((op, i) => r = op === '+' ? r + nums[i+1] : r - nums[i+1]);
+    return clean(r);
+  }
+  const exprText = tk => tk.map(x => isOp(x) ? ' ' + OPSYM[x] + ' ' : fmtNum(x)).join('') || '0';
+  const numStr = n => { let s = String(n); if (/e/.test(s)) s = n.toPrecision(12).replace(/\.?0+(e)/, '$1'); return s; };
+  function calcPress(k){
+    const t = calc.t, last = t[t.length-1];
+    if (calc.err && k !== 'C'){ calc.t = []; calc.err = false; }
+    if (/^\d$/.test(k)){
+      if (calc.done){ calc.t = [k]; calc.done = false; }
+      else if (last !== undefined && !isOp(last)){
+        const digits = last.replace(/[^\d]/g,'').length;
+        if (digits < 15) t[t.length-1] = (last === '0' ? k : last === '-0' ? '-' + k : last + k);
+      } else t.push(k);
+    } else if (k === '.'){
+      if (calc.done){ calc.t = ['0.']; calc.done = false; }
+      else if (last !== undefined && !isOp(last)){ if (!last.includes('.')) t[t.length-1] = last + '.'; }
+      else t.push('0.');
+    } else if (isOp(k)){
+      calc.done = false;
+      if (!t.length) t.push('0');
+      if (isOp(t[t.length-1])) t[t.length-1] = k; else t.push(k);
+    } else if (k === '='){
+      if (!t.length || calc.done) return calcShow();
+      const r = evalTokens(t);
+      if (r === null) return calcShow();
+      calc.hist = exprText(t.filter((x,i,a) => !(i === a.length-1 && isOp(x)))) + ' =';
+      if (!isFinite(r)){ calc.err = true; calc.t = []; }
+      else { calc.t = [numStr(r)]; calc.done = true; }
+    } else if (k === 'C'){
+      if (!t.length && !calc.err) calc.hist = '';
+      calc.t = []; calc.done = false; calc.err = false;
+    } else if (k === 'back'){
+      if (calc.done){ calc.done = false; }
+      if (last !== undefined){
+        if (isOp(last) || last.length <= 1 || last === '-0' || /^-\d$/.test(last)) t.pop();
+        else t[t.length-1] = last.slice(0, -1);
+      }
+    } else if (k === 'neg' || k === '%'){
+      if (last === undefined || isOp(last)) return calcShow();
+      const n = parseFloat(last);
+      t[t.length-1] = k === 'neg' ? (last.startsWith('-') ? last.slice(1) : '-' + last) : numStr(clean(n / 100));
+      calc.done = false;
+    }
+    calcShow();
+  }
+  function calcShow(){
+    const e = $('calcExpr');
+    e.classList.toggle('err', calc.err);
+    e.textContent = calc.err ? 'Can’t divide by 0' : exprText(calc.t);
+    $('calcHist').textContent = calc.hist || ' ';
+    // live preview of the result while typing a multi-step sum
+    const ops = calc.t.filter(isOp).length, r = (!calc.done && ops) ? evalTokens(calc.t) : null;
+    $('calcPrev').textContent = (r !== null && isFinite(r) && calc.t.length > 2) ? '= ' + fmtNum(numStr(r)) : ' ';
+    document.querySelectorAll('#calcKeys .op').forEach(b => b.classList.toggle('on', calc.t[calc.t.length-1] === b.dataset.k));
+  }
+  document.querySelectorAll('#calcKeys .key').forEach(b => b.addEventListener('click', () => calcPress(b.dataset.k)));
+  // hardware keyboard support (Magic Keyboard etc.) while the Calc tab is open
+  document.addEventListener('keydown', e => {
+    if (!$('view-calc').classList.contains('active')) return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) return;
+    const map = {Enter:'=', '=':'=', Backspace:'back', Escape:'C', Delete:'C', 'x':'*', 'X':'*'};
+    const k = map[e.key] || (/^[\d.+\-*/%]$/.test(e.key) ? e.key : null);
+    if (k){ e.preventDefault(); calcPress(k); }
+  });
+  calcShow();
 
   /* ---------- PA ---------- */
   const PA_DEF = {ms:'None', dep:'SIN', dest:'', land:'', taxi:'', cap1:'', cap2:'', cloud:'', rain:'', other:'', tc:'', scp:''};
