@@ -130,7 +130,8 @@
   /* ---------- Compact: small app window ---------- */
   body.compact header{padding:6px 10px 6px 10px}
   body.compact .tabs{max-width:none;margin:0 0 0 68px;padding:3px;gap:3px;border-radius:10px} /* room for the window buttons */
-  body.compact .tab{min-height:36px;padding:4px 2px;font-size:13px;border-radius:7px}
+  .tab{white-space:nowrap}
+  body.compact .tab{min-height:34px;padding:4px 2px;font-size:12px;border-radius:7px}
   body.compact .padbtn{width:38px;height:38px;font-size:16px}
   body.compact main{padding:8px 10px calc(8px + env(safe-area-inset-bottom));gap:8px}
   @media (orientation: landscape){ body.compact main{grid-template-columns:minmax(0,13fr) minmax(0,7fr)} body.compact.nopad main{grid-template-columns:minmax(0,1fr)} }
@@ -254,21 +255,26 @@
   .nrow .num.sel.dd.ofprecent,.ofprecent{max-width:260px}
   #view-ofp .num.sel.dd{width:auto;min-width:0;height:40px;font-size:15px;padding:0 30px 0 10px;
     background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
-  .ofpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-  .ofpf{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
+  .ofpgrid{display:flex;flex-direction:column;gap:5px}
+  .ofpf{display:grid;grid-template-columns:140px 1fr;align-items:baseline;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-width:0}
   .ofpf .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600}
-  .ofpf .v{font-size:22px;font-variant-numeric:tabular-nums;font-weight:500;margin-top:2px;overflow-wrap:anywhere}
-  .ofpf .v small{font-size:13px;color:var(--dim);font-weight:400;margin-left:2px}
+  .ofpf .v{font-size:17px;font-variant-numeric:tabular-nums;font-weight:500;overflow-wrap:anywhere}
+  .ofpf .v small{font-size:12px;color:var(--dim);font-weight:400;margin-left:2px}
   .ofpf .v .sep{color:var(--dim);margin:0 6px}
-  .ofpf.miss .v{color:#4b5563;font-size:15px}
+  .ofpf.miss .v{color:#4b5563;font-size:14px;font-weight:400}
   .ofpf.wide{grid-column:1/-1}
   .ofphead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-  .ofphead .big{font-size:26px;font-weight:600}
+  .ofphead .big{font-size:21px;font-weight:600}
   .ofphead .unit{font-size:14px}
-  body.compact .ofpf .v{font-size:18px}
-  body.compact .ofpgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-  body.compact .ofpf{padding:6px 10px}
-  body.compact .ofphead .big{font-size:20px}
+  body.compact .ofpf .v{font-size:15px}
+  body.compact #view-ofp .num.sel.dd{height:34px;font-size:13px;padding:0 26px 0 8px}
+  body.compact #view-ofp .nsyncrow .btn.small{min-height:34px;font-size:13px}
+  body.compact #view-ofp .nmeta{min-width:0;font-size:11px}
+  body.compact .ofpgrid{gap:4px}
+  body.compact .ofpf{padding:4px 10px;grid-template-columns:112px 1fr;gap:8px}
+  body.compact .ofpf .k{font-size:10px}
+  body.compact .ofphead .big{font-size:18px}
+  body.compact .ofphead{margin-bottom:6px}
 
   /* Calculator */
   .calc{max-width:560px;width:100%;margin:0 auto}
@@ -593,7 +599,7 @@
       <div class="nsyncrow" style="margin-bottom:0">
         <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
         <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
-        <button class="btn small" id="ofpRoute" style="display:none">Use route in PA/Notes</button>
+        <button class="btn small" id="ofpRoute" style="display:none" title="Set DEP/DEST on the PA and Notes tabs">Use route</button>
         <div class="nmeta" id="ofpMeta">Pick an annotated OFP PDF from Files.</div>
       </div>
     </div>
@@ -1469,7 +1475,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v26 · ' + w + '×' + h;
+    $('ver').textContent = 'v27 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
