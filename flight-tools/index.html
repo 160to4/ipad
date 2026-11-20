@@ -250,6 +250,11 @@
   body.compact .nrow .num.sel.dd{height:38px;font-size:15px}
   body.compact .ntext{font-size:15px}
 
+  .tofp{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .tofp .btn.small{min-width:0;width:34px;height:32px;min-height:32px;padding:0;font-size:18px}
+  .tofp .tval{font-size:17px;font-variant-numeric:tabular-nums;min-width:24px;text-align:center;color:var(--amber)}
+  body.compact .tofp .btn.small{width:30px;height:28px;min-height:28px}
+
   /* OFP */
   .ofpopen{position:relative;cursor:pointer;display:inline-flex;align-items:center}
   .nrow .num.sel.dd.ofprecent,.ofprecent{max-width:260px}
@@ -472,6 +477,13 @@
         <div>
           <div class="label" style="margin-bottom:8px">Take-off time · 24h</div>
           <input class="num t24" id="crTo" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="00:00">
+          <div class="tofp" id="crFromOfp" style="display:none">
+            <span class="unit" id="crStd">STD</span>
+            <span class="unit">+ taxi</span>
+            <button class="btn small" id="crTaxiM" aria-label="Taxi minus 1 minute">−</button>
+            <span class="tval" id="crTaxi">15</span><span class="unit">min</span>
+            <button class="btn small" id="crTaxiP" aria-label="Taxi plus 1 minute">+</button>
+          </div>
         </div>
         <div>
           <div class="label" style="margin-bottom:8px">Flight time</div>
@@ -1400,12 +1412,25 @@
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
     }
   }
-  // Push the OFP flight time (e.g. 13.05) into the Rest tab
-  function ofpToRest(d){
-    if (!d || !d.ft) return;
-    const [h, m] = d.ft.split('.').map(Number); if (isNaN(h) || isNaN(m)) return;
-    $('crFh').value = h; $('crFm').value = pad2(m); crCalc();
+  // Push OFP figures into the Rest tab: flight time, and take-off = STD + taxi-out (taxi fine-tuned with −/+)
+  const crOfp = store.get('crOfp', {std: null, taxi: 15});
+  function crApplyTo(){
+    if (!crOfp.std){ $('crFromOfp').style.display = 'none'; return; }
+    $('crFromOfp').style.display = '';
+    $('crStd').textContent = 'STD ' + crOfp.std.slice(0,2) + ':' + crOfp.std.slice(2);
+    $('crTaxi').textContent = crOfp.taxi;
+    const t = ((+crOfp.std.slice(0,2) * 60 + +crOfp.std.slice(2) + crOfp.taxi) % 1440 + 1440) % 1440;
+    $('crTo').value = pad2(Math.floor(t/60)) + ':' + pad2(t % 60); $('crTo').classList.remove('bad'); crCalc();
   }
+  const crTaxiStep = k => { crOfp.taxi = Math.max(0, Math.min(120, crOfp.taxi + k)); store.set('crOfp', crOfp); crApplyTo(); };
+  $('crTaxiM').onclick = () => crTaxiStep(-1);
+  $('crTaxiP').onclick = () => crTaxiStep(1);
+  function ofpToRest(d){
+    if (!d) return;
+    if (d.ft){ const [h, m] = d.ft.split('.').map(Number); if (!isNaN(h) && !isNaN(m)){ $('crFh').value = h; $('crFm').value = pad2(m); } }
+    if (d.std && /^\d{4}$/.test(d.std)){ crOfp.std = d.std; store.set('crOfp', crOfp); crApplyTo(); } else crCalc();
+  }
+  if (crOfp.std){ $('crFromOfp').style.display = ''; $('crStd').textContent = 'STD ' + crOfp.std.slice(0,2) + ':' + crOfp.std.slice(2); $('crTaxi').textContent = crOfp.taxi; }
   $('ofpFile').addEventListener('change', async ev => {
     const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
     if (!f) return;
@@ -1641,7 +1666,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v37 · ' + w + '×' + h;
+    $('ver').textContent = 'v38 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
