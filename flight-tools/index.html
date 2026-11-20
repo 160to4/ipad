@@ -529,9 +529,9 @@
   <section class="view" id="view-notes">
     <div class="card">
       <div class="nrow">
-        <span class="unit">DEP</span><select class="num sel dd" id="nDep"></select>
+        <span class="grp"><span class="unit">DEP</span><select class="num sel dd" id="nDep"></select></span>
         <button class="btn small" id="nSwap" aria-label="Swap departure and destination">⇄</button>
-        <span class="unit">DEST</span><select class="num sel dd" id="nDest"></select>
+        <span class="grp"><span class="unit">DEST</span><select class="num sel dd" id="nDest"></select></span>
         <span class="nsync">
           <a class="btn small" id="nRun" href="shortcuts://run-shortcut?name=Sync%20Flight%20Notes">1 · Sync</a>
           <button class="btn small" id="nPaste">2 · Paste</button>
@@ -1026,7 +1026,7 @@
     const codes = nCodes();
     ['nDep','nDest'].forEach((id, i) => {
       const key = i ? 'dest' : 'dep', el = $(id);
-      el.innerHTML = '<option value="">—</option>' + codes.map(c => `<option value="${c}">${c}${APT[c] ? ' · ' + APT[c].name : ''}</option>`).join('');
+      el.innerHTML = '<option value="">—</option>' + codes.map(c => `<option value="${c}">${c}${APT[c] && !(typeof aptShort !== 'undefined' && aptShort) ? ' · ' + APT[c].name : ''}</option>`).join('');
       el.value = pa[key] || '';
     });
   }
@@ -1260,15 +1260,17 @@
   swLoadInputs(); cdLoadInputs(); swUI(); cdUI(); crCalc();
 
   /* ---------- Window size: compact layout + scratchpad toggle ---------- */
+  var aptShort = false; // var: read by nFill() before this point runs
   function aptLabels(short){
-    ['paDep','paDest'].forEach(id => $(id).querySelectorAll('option').forEach(o => {
-      if (!o.value) return; o.textContent = short ? o.value : `${o.value} · ${APT[o.value].name}`;
+    aptShort = short;
+    ['paDep','paDest','nDep','nDest'].forEach(id => $(id).querySelectorAll('option').forEach(o => {
+      if (!o.value) return; o.textContent = short || !APT[o.value] ? o.value : `${o.value} · ${APT[o.value].name}`;
     }));
   }
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v23 · ' + w + '×' + h;
+    $('ver').textContent = 'v24 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
