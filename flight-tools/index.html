@@ -1365,25 +1365,31 @@
     let fitV = tn(d.fit), ptowV = tn(d.ptow);
     const pzKg = d.pzfwKg != null ? d.pzfwKg : (d.pzfw != null ? d.pzfw * 1000 : null);
     const pzfwV = dz && pzKg != null ? `<span class="new">${up1(pzKg + dz * 1000).toFixed(1)}<small>T</small></span>` : tn(d.pzfw);
-    if (dz){
-      const rate = dz > 0 ? rates.add : rates.less;
-      if (rate == null){
-        fitV = (tn(d.fit) || '—') + `<span class="calc">No burn ${dz > 0 ? 'add' : 'less'} figure in this OFP — can’t adjust fuel.</span>`;
-      } else {
-        const extraKg = dz > 0 ? dz * rate : -Math.abs(dz) * rate;
-        const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
-        if (fitKg != null){
-          const nf = up1(fitKg + extraKg);
-          fitV = `${tn(d.fit)}<span class="arrow">→</span><span class="new">${nf.toFixed(1)}<small>T</small></span><span class="calc">${extraKg >= 0 ? '+' : '−'}${Math.round(Math.abs(extraKg))}KG (${dz > 0 ? '+' : ''}${dz.toFixed(1)}T × ${rate}KG per 1000KG)</span>`;
-        }
-        const ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
-        if (ptowKg != null){
-          const taxi = d.taxiKg != null ? d.taxiKg : null;
-          const np = up1(ptowKg + dz * 1000 + extraKg + (taxi || 0));
-          const parts = [(ptowKg/1000).toFixed(1), `${dz > 0 ? '+' : '−'} ${Math.abs(dz).toFixed(1)}`, `${extraKg >= 0 ? '+' : '−'} ${(Math.abs(extraKg)/1000).toFixed(3)} fuel`];
-          if (taxi != null) parts.push(`+ ${(taxi/1000).toFixed(1)} taxi`);
-          ptowV = `${tn(d.ptow)}<span class="arrow">→</span><span class="new">${np.toFixed(1)}<small>T</small></span><span class="calc">${parts.join(' ')}${taxi == null ? ' · taxi fuel not found (reopen the OFP)' : ''}</span>`;
-        }
+    // Extra fuel loaded on top of the plan (per OFP), in 0.5T steps
+    const xs = (ofp.xs && ofp.xs[e.id]) || 0;
+    const xsCtl = `<span class="adj" style="margin-left:0"><button data-xs="-1" aria-label="Excess fuel minus 0.5">−</button><input id="ofpXs" inputmode="decimal" value="${xs ? (xs > 0 ? '+' : '') + xs.toFixed(1) : '0.0'}" class="${xs ? 'on' : ''}" aria-label="Excess fuel in tonnes"><button data-xs="1" aria-label="Excess fuel plus 0.5">+</button></span>`;
+    const rate = dz > 0 ? rates.add : rates.less;
+    const noRate = dz && rate == null;
+    const burnKg = dz && !noRate ? (dz > 0 ? dz * rate : -Math.abs(dz) * rate) : 0;
+    const sgn = v => v >= 0 ? '+' : '−';
+    if (dz || xs){
+      const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
+      if (fitKg != null){
+        const nf = up1(fitKg + burnKg + xs * 1000);
+        const why = [];
+        if (dz) why.push(noRate ? `no burn ${dz > 0 ? 'add' : 'less'} figure in this OFP` : `${sgn(burnKg)}${Math.round(Math.abs(burnKg))}KG burn (${dz > 0 ? '+' : ''}${dz.toFixed(1)}T × ${rate}KG per 1000KG)`);
+        if (xs) why.push(`${sgn(xs)}${Math.abs(xs).toFixed(1)}T excess`);
+        fitV = `${tn(d.fit)}<span class="arrow">→</span><span class="new">${nf.toFixed(1)}<small>T</small></span><span class="calc">${why.join(' · ')}</span>`;
+      }
+      const ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
+      if (ptowKg != null){
+        const taxi = d.taxiKg != null ? d.taxiKg : null;
+        const np = up1(ptowKg + dz * 1000 + burnKg + xs * 1000 + (taxi || 0));
+        const parts = [(ptowKg/1000).toFixed(1)];
+        if (dz) parts.push(`${sgn(dz)} ${Math.abs(dz).toFixed(1)}`, `${sgn(burnKg)} ${(Math.abs(burnKg)/1000).toFixed(3)} fuel`);
+        if (xs) parts.push(`${sgn(xs)} ${Math.abs(xs).toFixed(1)} excess`);
+        if (taxi != null) parts.push(`+ ${(taxi/1000).toFixed(1)} taxi`);
+        ptowV = `${tn(d.ptow)}<span class="arrow">→</span><span class="new">${np.toFixed(1)}<small>T</small></span><span class="calc">${parts.join(' ')}${taxi == null ? ' · taxi fuel not found (reopen the OFP)' : ''}</span>`;
       }
     }
     box.innerHTML = `
@@ -1397,6 +1403,7 @@
         ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', d.burn == null ? null : tn(d.burn) + (ldg != null ? `<span class="br">(LDG ${ldg.toFixed(1)}T)</span>` : ''))}
         ${ofpField('Reserves · ALTN', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
+        ${ofpField('Excess fuel', xsCtl)}
         ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn add / less', ba)}
         ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
@@ -1405,12 +1412,14 @@
     // stepper events
     const setAdj = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.adj = ofp.adj || {}; if (v) ofp.adj[e.id] = v; else delete ofp.adj[e.id]; store.set('ofp', ofp); ofpRender(); };
     box.querySelectorAll('[data-adj]').forEach(b => b.onclick = () => { const k = +b.dataset.adj; setAdj(k === 0 ? 0 : dz + k * 0.1); });
-    const inp = $('ofpAdj');
-    if (inp){
+    const setXs = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.xs = ofp.xs || {}; if (v) ofp.xs[e.id] = v; else delete ofp.xs[e.id]; store.set('ofp', ofp); ofpRender(); };
+    box.querySelectorAll('[data-xs]').forEach(b => b.onclick = () => setXs(xs + (+b.dataset.xs) * 0.5));
+    [['ofpAdj', setAdj], ['ofpXs', setXs]].forEach(([id, set]) => {
+      const inp = $(id); if (!inp) return;
       inp.addEventListener('focus', () => setTimeout(() => inp.select(), 0));
-      inp.addEventListener('change', () => { const v = parseFloat(inp.value.replace(/[^\d.\-+]/g, '')); setAdj(isNaN(v) ? 0 : v); });
+      inp.addEventListener('change', () => { const v = parseFloat(inp.value.replace(/[^\d.\-+]/g, '')); set(isNaN(v) ? 0 : v); });
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
-    }
+    });
   }
   // Push OFP figures into the Rest tab: flight time, and take-off = STD + taxi-out (taxi fine-tuned with −/+)
   const crOfp = store.get('crOfp', {std: null, taxi: 15});
@@ -1666,7 +1675,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v39 · ' + w + '×' + h;
+    $('ver').textContent = 'v40 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
