@@ -1400,6 +1400,12 @@
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
     }
   }
+  // Push the OFP flight time (e.g. 13.05) into the Rest tab
+  function ofpToRest(d){
+    if (!d || !d.ft) return;
+    const [h, m] = d.ft.split('.').map(Number); if (isNaN(h) || isNaN(m)) return;
+    $('crFh').value = h; $('crFm').value = pad2(m); crCalc();
+  }
   $('ofpFile').addEventListener('change', async ev => {
     const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
     if (!f) return;
@@ -1410,7 +1416,7 @@
       const label = [d.flight || (h.flt ? 'SIA ' + h.flt : ''), d.dep ? d.dep + '-' + d.arr : '', d.date || h.date || ''].filter(Boolean).join(' ') || f.name;
       const id = String(Date.now());
       ofp.recent = [{id, label, name: f.name, at: Date.now(), data: d}, ...ofp.recent.filter(r => r.label !== label)].slice(0, 10);
-      ofp.cur = id; store.set('ofp', ofp);
+      ofp.cur = id; store.set('ofp', ofp); ofpToRest(d);
       const keys = ['flight','plan','reg','apd','std','sta','ft','fl','ci','pzfw','ptow','burn','cont','excess','reserves','altn','fit','taxiKg','route'];
       const found = keys.filter(k => k === 'route' ? (d.route1 || d.route) : d[k] != null && d[k] !== '').length;
       $('ofpMeta').textContent = `${f.name} · ${d.pages} pages · ${found}/${keys.length} values found`;
@@ -1420,7 +1426,7 @@
     }
   });
   $('ofpRecent').addEventListener('change', () => { ofp.cur = $('ofpRecent').value; store.set('ofp', ofp); ofpRender();
-    const e = ofp.recent.find(r => r.id === ofp.cur); if (e) $('ofpMeta').textContent = e.name; });
+    const e = ofp.recent.find(r => r.id === ofp.cur); if (e){ $('ofpMeta').textContent = e.name; ofpToRest(e.data); } });
   $('ofpBrief').onclick = () => { ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpRender(); };
   $('ofpRoute').onclick = () => {
     const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
@@ -1635,7 +1641,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v36 · ' + w + '×' + h;
+    $('ver').textContent = 'v37 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
