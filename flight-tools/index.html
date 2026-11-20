@@ -200,6 +200,25 @@
   body.compact .padbar{justify-content:flex-end}
   body.compact .hint{bottom:18px}
   #ver{white-space:nowrap}
+  /* App launcher bar */
+  .appbar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;gap:8px;background:rgba(13,17,23,.94);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding:8px calc(16px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+  .appbtns{flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .appbtns::-webkit-scrollbar{display:none}
+  .appbtns a{flex:0 0 auto;display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:10px;background:var(--panel);
+    border:1px solid var(--line);color:var(--text);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
+  .appbtns a:active{background:var(--panel2);border-color:var(--amber)}
+  .appbtns .none{color:var(--dim);font-size:13px;align-self:center}
+  .appedit{flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;background:transparent;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:600}
+  body.compact .appbar{padding:5px 10px calc(5px + env(safe-area-inset-bottom))}
+  body.compact .appbtns a,body.compact .appedit{min-height:34px;font-size:13px;padding:0 10px}
+  .appbox{max-width:560px !important;width:94% !important;text-align:left !important;max-height:88vh;overflow:auto}
+  .arow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+  .arow input{flex:1;min-width:0;height:38px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:14px}
+  .arow input.lbl{flex:0 0 120px}
+  .arow button{width:38px;height:38px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:16px;padding:0}
+  .appbox code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
 
   /* ---------- Narrow tool column (container queries) ---------- */
   @container (max-width: 600px){
@@ -646,6 +665,29 @@
   <div class="card pad" data-pad="shared"></div>
 </main>
 
+<!-- ============ APP LAUNCHER BAR (always visible) ============ -->
+<footer class="appbar" id="appbar">
+  <div class="appbtns" id="appBtns"></div>
+  <button class="appedit" id="appEdit" aria-label="Edit app buttons">Edit</button>
+</footer>
+
+<div class="modal" id="appModal">
+  <div class="box appbox">
+    <div class="label" style="margin-bottom:8px">App buttons</div>
+    <div id="appRows"></div>
+    <div class="row" style="margin-top:8px;gap:8px">
+      <select class="num sel dd" id="appPreset" aria-label="Add a preset"></select>
+      <button class="btn small" id="appAdd">+ Add</button>
+    </div>
+    <p class="unit" style="text-align:left;margin:10px 0 0;line-height:1.45">
+      <b>Link</b> is the app's address, e.g. <code>mobilenotes://</code>. For any app without one, make a Shortcut
+      (Shortcuts → + → <i>Open App</i> → pick the app, name it e.g. <b>Open EFB</b>) and type <code>shortcut:Open EFB</code>.
+      iPadOS decides where the app opens.
+    </p>
+    <div class="btns" style="justify-content:flex-end"><button class="btn small ghost" id="appCancel">Cancel</button><button class="btn small go" id="appSave">Save</button></div>
+  </div>
+</div>
+
 <div class="modal" id="alarmModal">
   <div class="box">
     <div class="label" style="margin-bottom:8px">Countdown</div>
@@ -654,10 +696,10 @@
   </div>
 </div>
 
-<div id="ver" style="text-align:center;font-size:11px;color:#3b4552;padding:0 0 calc(10px + env(safe-area-inset-bottom))">Flight Deck Tools · v19</div>
+<div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v44';   // bump with sw.js VERSION on every release
+  const APP_V = 'v45';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1712,6 +1754,43 @@
   padUI(); fit();
   show(location.hash.slice(1));
   updateWake();
+
+
+  /* ---------- App launcher bar ---------- */
+  const APP_PRESETS = [
+    ['Notes','mobilenotes://'], ['Files','shareddocuments://'], ['Shortcuts','shortcuts://'], ['Safari','https://www.google.com'],
+    ['Mail','message://'], ['Calendar','calshow://'], ['Maps','maps://'], ['Photos','photos-redirect://'], ['Messages','sms:'],
+    ['FaceTime','facetime://'], ['Any app (via Shortcut)','shortcut:Open App Name']
+  ];
+  let apps = store.get('apps', [['Notes','mobilenotes://'], ['Files','shareddocuments://']]);
+  const appHref = t => t.startsWith('shortcut:') ? 'shortcuts://run-shortcut?name=' + encodeURIComponent(t.slice(9).trim()) : t;
+  const okLink = t => /^[a-z][a-z0-9+.\-]*:/i.test(t) && !/^javascript:/i.test(t);
+  function appBar(){
+    $('appBtns').innerHTML = apps.length ? apps.map(([l, t]) => `<a href="${esc(appHref(t))}" target="_top">${esc(l)}</a>`).join('')
+      : '<span class="none">No app buttons yet — tap Edit</span>';
+    requestAnimationFrame(() => pads.forEach(p => p.resize()));
+  }
+  function appRows(list){
+    $('appRows').innerHTML = list.map(([l, t], i) => `<div class="arow" data-i="${i}">
+      <input class="lbl" value="${esc(l)}" placeholder="Name" autocapitalize="words">
+      <input class="lnk" value="${esc(t)}" placeholder="mobilenotes:// or shortcut:Open EFB" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button data-up aria-label="Move left">↑</button><button data-del aria-label="Remove">✕</button></div>`).join('');
+    $('appRows').querySelectorAll('.arow').forEach(r => {
+      const i = +r.dataset.i;
+      r.querySelector('[data-del]').onclick = () => { const l = readRows(); l.splice(i, 1); appRows(l); };
+      r.querySelector('[data-up]').onclick = () => { const l = readRows(); if (i > 0) [l[i-1], l[i]] = [l[i], l[i-1]]; appRows(l); };
+    });
+  }
+  const readRows = () => [...$('appRows').querySelectorAll('.arow')].map(r => [r.querySelector('.lbl').value.trim(), r.querySelector('.lnk').value.trim()]);
+  $('appPreset').innerHTML = '<option value="">Preset…</option>' + APP_PRESETS.map((p, i) => `<option value="${i}">${esc(p[0])}</option>`).join('');
+  $('appAdd').onclick = () => { const l = readRows(); const p = APP_PRESETS[$('appPreset').value]; l.push(p ? [p[0].replace(/ \(.*\)$/, ''), p[1]] : ['', '']); appRows(l); $('appPreset').value = ''; };
+  $('appEdit').onclick = () => { appRows(apps); $('appModal').classList.add('show'); };
+  $('appCancel').onclick = () => $('appModal').classList.remove('show');
+  $('appSave').onclick = () => {
+    apps = readRows().filter(([l, t]) => l && t && (t.startsWith('shortcut:') || okLink(t)));
+    store.set('apps', apps); appBar(); $('appModal').classList.remove('show');
+  };
+  appBar();
 
   /* ---------- Update button ---------- */
   $('appUpdate').onclick = async () => {
