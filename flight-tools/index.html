@@ -274,6 +274,8 @@
   .ofpf .v .bn{font-size:.8em;margin-left:6px}
   .ofpf.route .hl{color:var(--amber);font-weight:600}
   .ofpf .v .hlv,.ofpf .v .hlv small{color:var(--amber)}
+  .ofpf .v .kl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-right:4px;vertical-align:1px}
+  body.compact .ofpf .v .kl{font-size:10px}
   #ofpBrief.on{background:#3a2a0a;border-color:var(--amber);color:#ffd58a}
   .ofpf .v .br{color:var(--dim);font-weight:400;font-size:.88em;margin-left:6px}
   .ofpf.route .v{font-size:13px;font-weight:400;line-height:1.45;letter-spacing:.01em;word-spacing:2px}
@@ -1378,7 +1380,7 @@
         ${ofpField('Reg · APD', ([reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>') || null) && [reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>'))}
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}${blk != null ? `<span class="br">(${hm(blk)})</span>` : ''}` : null)}
         ${ofpField('Flight time', d.ft ? d.ft.replace('.', ':') + (net != null ? `<span class="br">(NET ${net < 0 ? '−' : ''}${hm(Math.abs(net))})</span>` : '') : null)}
-        ${ofpField('FL · CI', d.fl || d.ci != null ? `${d.fl ? hlB('FL' + ofpEsc(d.fl)) : '—'}<span class="sep">·</span>COST INDEX: ${d.ci != null ? hlB(ofpEsc(d.ci)) : '—'}${brief ? '<span class="bn">(4)</span>' : ''}` : null, false, '', brief ? 3 : 0)}
+        ${ofpField('FL · CI', d.fl || d.ci != null ? `${d.fl ? hlB('FL' + ofpEsc(d.fl)) : '—'}<span class="sep">·</span><span class="kl">Cost index</span> ${d.ci != null ? hlB(ofpEsc(d.ci)) : '—'}${brief ? '<span class="bn">(4)</span>' : ''}` : null, false, '', brief ? 3 : 0)}
         ${ofpField('PZFW', d.pzfw == null ? null : (dz ? pzfwV : hlB(tn(d.pzfw))) + adjCtl, false, '', brief ? 1 : 0)}
         ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', d.burn == null ? null : tn(d.burn) + (ldg != null ? `<span class="br">(LDG ${ldg.toFixed(1)}T)</span>` : ''))}
@@ -1633,7 +1635,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v35 · ' + w + '×' + h;
+    $('ver').textContent = 'v36 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
