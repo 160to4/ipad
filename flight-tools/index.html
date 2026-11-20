@@ -263,7 +263,7 @@
   .ofpgrid{display:flex;flex-direction:column;gap:5px}
   .ofpf{display:grid;grid-template-columns:140px 1fr;align-items:baseline;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-width:0}
   .ofpf .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600}
-  .ofpf .v{font-size:17px;font-variant-numeric:tabular-nums;font-weight:500;overflow-wrap:anywhere}
+  .ofpf .v{font-size:16px;font-variant-numeric:tabular-nums;font-weight:500;overflow-wrap:anywhere}
   .ofpf .v small{font-size:12px;color:var(--dim);font-weight:400;margin-left:2px}
   .ofpf .v .sep{color:var(--dim);margin:0 6px}
   .ofpf.miss .v{color:#4b5563;font-size:14px;font-weight:400}
@@ -283,7 +283,7 @@
   body.compact .ofpf .v .kl{font-size:10px}
   #ofpBrief.on{background:#3a2a0a;border-color:var(--amber);color:#ffd58a}
   .ofpf .v .br{color:var(--dim);font-weight:400;font-size:.88em;margin-left:6px}
-  .ofpf.route .v{font-size:13px;font-weight:400;line-height:1.45;letter-spacing:.01em;word-spacing:2px}
+  .ofpf.route .v{font-size:12px;font-weight:400;line-height:1.45;letter-spacing:.01em;word-spacing:2px}
   .ofpf .v .arrow{color:var(--dim);margin:0 6px}
   .ofpf .v .calc{display:block;font-size:12px;color:var(--dim);font-weight:400;margin-top:1px}
   body.compact .adj button{width:30px;height:28px;font-size:16px} body.compact .adj input{width:54px;height:28px;font-size:13px}
@@ -291,7 +291,7 @@
   .ofphead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
   .ofphead .big{font-size:21px;font-weight:600}
   .ofphead .unit{font-size:14px}
-  body.compact .ofpf .v{font-size:15px}
+  body.compact .ofpf .v{font-size:14px}
   body.compact #view-ofp .num.sel.dd{height:34px;font-size:13px;padding:0 26px 0 8px}
   body.compact #view-ofp .nsyncrow .btn.small{min-height:34px;font-size:13px}
   body.compact #view-ofp .nmeta{min-width:0;font-size:11px}
@@ -1666,7 +1666,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v38 · ' + w + '×' + h;
+    $('ver').textContent = 'v39 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
