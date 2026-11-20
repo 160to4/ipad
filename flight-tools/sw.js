@@ -1,6 +1,6 @@
 // Flight Deck Tools — offline cache.
 // Bump VERSION whenever any file changes so devices pick up the update.
-const VERSION = 'fdt-v55';
+const VERSION = 'fdt-v56';
 const FILES = [
   './',
   './index.html',

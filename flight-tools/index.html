@@ -722,7 +722,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v55';   // bump with sw.js VERSION on every release
+  const APP_V = 'v56';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1833,27 +1833,15 @@
   appBar();
 
   /* ---------- Link tester: guess app link addresses ---------- */
-  // Guesses for the apps still without a confirmed link: airline (SQ / SIA / singaporeair) styles + vendor styles
-  const LINK_NAMES = {
-    'ELB': ['elb', 'elogbook', 'techlog'],
-    'Sign': ['pilotsign', 'sign', 'psign'], 'Aviator': ['aviator'], 'AXIS': ['axis']
+  // Short guesses for the apps still without a confirmed link (found ones were short: ewas://, orlando://, flightpulse://)
+  const LINK_GUESSES = {
+    'ELB':     ['elb', 'elbapp', 'elog', 'elogs', 'eltb', 'etl', 'tlb', 'etlb', 'techlog', 'logbook', 'elogbook', 'myelb', 'ielb', 'elbsq', 'sqelb', 'siaelb', 'elb.sq', 'elb.sia'],
+    'Sign':    ['pilotsign', 'psign', 'sign', 'esign', 'signpilot', 'pilotsig', 'pltsign', 'ps', 'sqsign', 'siasign', 'sign.sq', 'pilotsign.sq'],
+    'Aviator': ['aviator', 'aviatorx', 'aviatr', 'avtr', 'avi', 'aviator2', 'myaviator', 'sqaviator', 'aviator.sq', 'aviator.sia', 'javiator', 'aviatorefb'],
+    'AXIS':    ['axis', 'axisapp', 'axisx', 'axis2', 'myaxis', 'axisefb', 'axiscrew', 'axissq', 'sqaxis', 'siaaxis', 'axis.sq', 'axis.sia']
   };
-  const airlineGuesses = n => [
-    `sq.${n}`, `sia.${n}`, `sq${n}`, `sia${n}`, `sq-${n}`, `sia-${n}`, `${n}.sq`, `${n}.sia`, `${n}sq`, `${n}sia`,
-    `singaporeair.${n}`, `${n}.singaporeair`, `singaporeair${n}`, `singaporeairlines.${n}`,
-    `com.singaporeair.${n}`, `com.sia.${n}`, `com.sq.${n}`, `com.singaporeairlines.${n}`,
-    `sg.com.singaporeair.${n}`, `sg.com.sia.${n}`, `sg.com.sq.${n}`,
-    `${n}.singaporeair.com.sg`, `${n}.sia.com.sg`, `${n}.singaporeair.com`, `sia.com.sg.${n}`, `singaporeair.com.sg.${n}`
-  ].map(g => g + '://');
-  const vendorGuesses = {
-    'FD pro': ['flitedeckx.jeppesen', 'flitedeckpro.jeppesen', 'flitedeck.jeppesen', 'fdpro.jeppesen', 'jeppesen.flitedeckpro', 'com.jeppesen.flitedeckpro', 'flitedeck.boeing', 'fdpro.boeing', 'flitedeckpro.boeing', 'fdx.jeppesen', 'jeppfdpro', 'flitedeckprox'],
-    'Aviator': ['aviator.jeppesen', 'aviator.boeing', 'jeppesen.aviator', 'com.jeppesen.aviator', 'com.boeing.aviator', 'boeing.aviator', 'aviatorx.jeppesen'],
-    'ELB': ['elb.boeing', 'elb.ultramain', 'ultramain.elb', 'elb.navblue', 'elogbook.boeing'],
-    'Sign': ['pilotsign.boeing'], 'AXIS': ['axis.boeing', 'axis.jeppesen']
-  };
-  const LINK_GUESSES = Object.fromEntries(Object.entries(LINK_NAMES).map(([l, ns]) =>
-    [l, [...new Set((vendorGuesses[l] || []).map(g => g + '://').concat(ns.flatMap(airlineGuesses)))]]));
-  if (store.get('linkSet', 0) < 3){ store.set('linkTried', {}); store.set('linkSet', 3); }   // new guess list: clear the greyed-out marks
+  for (const k in LINK_GUESSES) LINK_GUESSES[k] = LINK_GUESSES[k].map(g => g + '://');
+  if (store.get('linkSet', 0) < 4){ store.set('linkTried', {}); store.set('linkSet', 4); }   // new guess list: clear the greyed-out marks
   let tried = store.get('linkTried', {});
   function openLink(url){ const a = document.createElement('a'); a.href = url; a.target = '_top'; document.body.appendChild(a); a.click(); a.remove(); }
   function linkRender(){
