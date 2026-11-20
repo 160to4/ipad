@@ -1213,7 +1213,23 @@
     const miss = v == null || v === '';
     return `<div class="ofpf${miss ? ' miss' : ''}${wide ? ' wide' : ''}"><div class="k">${k}</div><div class="v">${miss ? 'not found' : v}</div></div>`;
   }
-  const tn = v => v == null ? null : v.toFixed(1) + '<small>t</small>';
+  const tn = v => v == null ? null : v.toFixed(1) + '<small>T</small>';
+  // Burn add/less: "+450KG / -410KG", then "2000ft below: +XXXKG" on the next line.
+  function burnAddLess(list){
+    if (!list || !list.length) return null;
+    const num = v => { const m = String(v).replace(/\s/g,'').match(/^([+\-]?)0*(\d+)/); return m ? {sign: m[1], n: m[2]} : null; };
+    let add = null, less = null, below = null;
+    list.forEach(({label, value}) => {
+      const L = label.toUpperCase(), v = num(value); if (!v) return;
+      if (/2000\s*(FT|')|BELOW|LOWER/.test(L)){ if (!below) below = v; }
+      else if (v.sign === '-' || (!v.sign && L.includes('LESS') && !L.includes('ADD'))){ if (!less) less = v; }
+      else if (!add) add = v;
+    });
+    const kg = (v, def) => `${v.sign || def}${v.n}KG`;
+    const line1 = [add && kg(add, '+'), less && kg(less, '-')].filter(Boolean).join(' / ');
+    const line2 = below ? `2000ft below: ${kg(below, '+')}` : '';
+    return [line1, line2].filter(Boolean).join('<br>') || null;
+  }
   function ofpRender(){
     const e = ofp.recent.find(r => r.id === ofp.cur), box = $('ofpOut');
     $('ofpRecent').innerHTML = ofp.recent.length ? ofp.recent.map(r => `<option value="${r.id}">${ofpEsc(r.label)}</option>`).join('') : '<option value="">No OFPs loaded yet</option>';
@@ -1225,7 +1241,7 @@
     const plan = d.plan || (h.ofp ? 'OFP ' + h.ofp : null);
     const reg = d.reg || h.reg;
     const route = d.dep ? `${d.dep} → ${d.arr}` : (h.depI ? `${h.depI} → ${h.arrI}` : '');
-    const ba = d.burnAdd.length ? d.burnAdd.map(b => `${ofpEsc(b.value)} <small>${ofpEsc(b.label)}</small>`).join('<br>') : null;
+    const ba = burnAddLess(d.burnAdd);
     box.innerHTML = `
       <div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}</span></div>
       <div class="ofpgrid">
@@ -1238,7 +1254,7 @@
         ${ofpField('Burn-off', tn(d.burn))}
         ${ofpField('Reserves · ALTN', d.reserves != null || d.altn ? `${tn(d.reserves) || '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}` : null)}
         ${ofpField('Fuel in tanks', tn(d.fit))}
-        ${ofpField('Burn add / less', ba, d.burnAdd.length > 1)}
+        ${ofpField('Burn add / less', ba)}
       </div>`;
     $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
   }
@@ -1475,7 +1491,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v27 · ' + w + '×' + h;
+    $('ver').textContent = 'v28 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
