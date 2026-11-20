@@ -722,7 +722,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v54';   // bump with sw.js VERSION on every release
+  const APP_V = 'v55';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1793,7 +1793,7 @@
   ];
   if (store.get('appsSet', 0) < 2){ store.set('apps', APP_DEFAULTS); store.set('appsSet', 2); }   // one-time switch to these defaults
   // confirmed working links (set on existing buttons too)
-  const APP_FOUND = {'OPT': 'opt.boeing://', 'eWAS': 'ewas://', 'Orlando': 'orlando://', 'Pulse': 'flightpulse://'};
+  const APP_FOUND = {'FD pro': 'flitedeckx.jeppesen://', 'OPT': 'opt.boeing://', 'eWAS': 'ewas://', 'Orlando': 'orlando://', 'Pulse': 'flightpulse://'};
   if (store.get('appsSet', 0) < 3){ store.set('apps', store.get('apps', APP_DEFAULTS).map(([l, t]) => l === 'FD pro' && t === 'shortcut:Open FD Pro' ? [l, 'flitedeckx.jeppesen://'] : [l, t])); store.set('appsSet', 3); }
   // whenever the list of confirmed links grows, swap any remaining Shortcut buttons over to them
   if (store.get('appsFound', '') !== JSON.stringify(APP_FOUND)){
@@ -1835,7 +1835,7 @@
   /* ---------- Link tester: guess app link addresses ---------- */
   // Guesses for the apps still without a confirmed link: airline (SQ / SIA / singaporeair) styles + vendor styles
   const LINK_NAMES = {
-    'FD pro': ['fdpro', 'flitedeck', 'flitedeckpro', 'fd'], 'ELB': ['elb', 'elogbook', 'techlog'],
+    'ELB': ['elb', 'elogbook', 'techlog'],
     'Sign': ['pilotsign', 'sign', 'psign'], 'Aviator': ['aviator'], 'AXIS': ['axis']
   };
   const airlineGuesses = n => [
