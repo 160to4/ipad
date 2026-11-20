@@ -221,6 +221,10 @@
   .arow input{flex:1;min-width:0;height:38px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:14px}
   .arow input.lbl{flex:0 0 120px}
   .arow button{width:38px;height:38px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:16px;padding:0}
+  .lpre{flex:1;display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding-right:10px}
+  .lpre input.lnk{border:0 !important;background:transparent !important;flex:1}
+  .lsuf{color:var(--dim);font:14px ui-monospace,monospace}
+  #linkFor{flex:1;height:38px;font-size:14px;width:auto;padding:0 30px 0 10px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
   .lrow{border-top:1px solid var(--line);padding:8px 0}
   .lrow .lname{font-weight:700;font-size:14px;margin-bottom:6px}
   .lrow .lname small{color:var(--dim);font-weight:400;margin-left:6px}
@@ -686,10 +690,17 @@
 <div class="modal" id="linkModal">
   <div class="box appbox">
     <div class="label" style="margin-bottom:6px">Find link addresses</div>
-    <p class="unit" style="text-align:left;margin:0 0 10px;line-height:1.45">Tap a guess to test it. If the right app opens, come back and tap <b>Use</b> next to it.
-      A wrong guess just shows an error (or opens a different app — then it's not the one).</p>
-    <div id="linkRows"></div>
-    <div class="arow" style="margin-top:10px"><input class="lnk" id="linkOwn" placeholder="Try your own, e.g. myapp://" autocapitalize="off" autocorrect="off" spellcheck="false"><button id="linkOwnTest" style="width:auto;padding:0 12px">Test</button></div>
+    <p class="unit" style="text-align:left;margin:0 0 10px;line-height:1.45">Type a guess and tap <b>Test</b>. If the right app opens, come back, pick the app and tap <b>Use</b>.</p>
+    <div class="arow">
+      <span class="lpre"><input class="lnk" id="linkOwn" placeholder="e.g. elb" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span class="lsuf">://</span></span>
+      <button id="linkOwnTest" style="width:auto;padding:0 14px">Test</button>
+    </div>
+    <div class="arow" style="margin-top:8px">
+      <select class="num sel dd" id="linkFor" aria-label="App"></select>
+      <button id="linkUse" style="width:auto;padding:0 14px;background:#1f6f3a;color:#fff">Use</button>
+    </div>
+    <div class="unit" id="linkMsg" style="min-height:18px;margin-top:4px"></div>
+    <div class="unit" id="linkHist" style="margin-top:6px;line-height:1.6"></div>
     <div class="btns" style="justify-content:flex-end"><button class="btn small go" id="linkDone">Done</button></div>
   </div>
 </div>
@@ -722,7 +733,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v56';   // bump with sw.js VERSION on every release
+  const APP_V = 'v57';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1833,34 +1844,29 @@
   appBar();
 
   /* ---------- Link tester: guess app link addresses ---------- */
-  // Short guesses for the apps still without a confirmed link (found ones were short: ewas://, orlando://, flightpulse://)
-  const LINK_GUESSES = {
-    'ELB':     ['elb', 'elbapp', 'elog', 'elogs', 'eltb', 'etl', 'tlb', 'etlb', 'techlog', 'logbook', 'elogbook', 'myelb', 'ielb', 'elbsq', 'sqelb', 'siaelb', 'elb.sq', 'elb.sia'],
-    'Sign':    ['pilotsign', 'psign', 'sign', 'esign', 'signpilot', 'pilotsig', 'pltsign', 'ps', 'sqsign', 'siasign', 'sign.sq', 'pilotsign.sq'],
-    'Aviator': ['aviator', 'aviatorx', 'aviatr', 'avtr', 'avi', 'aviator2', 'myaviator', 'sqaviator', 'aviator.sq', 'aviator.sia', 'javiator', 'aviatorefb'],
-    'AXIS':    ['axis', 'axisapp', 'axisx', 'axis2', 'myaxis', 'axisefb', 'axiscrew', 'axissq', 'sqaxis', 'siaaxis', 'axis.sq', 'axis.sia']
-  };
-  for (const k in LINK_GUESSES) LINK_GUESSES[k] = LINK_GUESSES[k].map(g => g + '://');
-  if (store.get('linkSet', 0) < 4){ store.set('linkTried', {}); store.set('linkSet', 4); }   // new guess list: clear the greyed-out marks
-  let tried = store.get('linkTried', {});
+  // Manual tester: type the part before "://", test it, then assign it to an app
+  let tried = store.get('linkTried2', []);
+  const linkVal = () => $('linkOwn').value.trim().replace(/:\/*$/, '').replace(/\s+/g, '');
   function openLink(url){ const a = document.createElement('a'); a.href = url; a.target = '_top'; document.body.appendChild(a); a.click(); a.remove(); }
   function linkRender(){
-    const labels = apps.map(a => a[0]);
-    const names = Object.keys(LINK_GUESSES).filter(l => labels.includes(l) && !APP_FOUND[l]);
-    $('linkRows').innerHTML = names.map(l => {
-      const cur = (apps.find(a => a[0] === l) || [])[1] || '';
-      const guesses = (LINK_GUESSES[l] || [l.toLowerCase().replace(/[^a-z0-9]/g,'') + '://']);
-      return `<div class="lrow"><div class="lname">${esc(l)}<small>now: ${esc(cur)}</small></div><div class="lchips">${guesses.map(g =>
-        `<span class="lchip${g === cur ? ' cur' : ''}"><a href="${esc(g)}" data-g="${esc(g)}" class="${tried[g] ? 'tried' : ''}">${esc(g)}</a><button data-use="${esc(g)}" data-l="${esc(l)}">Use</button></span>`).join('')}</div></div>`;
-    }).join('');
-    $('linkRows').querySelectorAll('a[data-g]').forEach(a => a.addEventListener('click', () => { tried[a.dataset.g] = 1; store.set('linkTried', tried); a.classList.add('tried'); }));
-    $('linkRows').querySelectorAll('[data-use]').forEach(b => b.onclick = () => {
-      apps = apps.map(([l, t]) => l === b.dataset.l ? [l, b.dataset.use] : [l, t]); store.set('apps', apps); appBar(); appRows(apps); linkRender();
-    });
+    const left = apps.filter(([l]) => !APP_FOUND[l]).map(a => a[0]);
+    $('linkFor').innerHTML = (left.length ? left : apps.map(a => a[0])).map(l => `<option>${esc(l)}</option>`).join('');
+    $('linkHist').innerHTML = tried.length ? 'Tried: ' + tried.slice(-30).map(t => `<code>${esc(t)}</code>`).join(' ') : '';
+    $('linkMsg').textContent = '';
   }
-  $('appFind').onclick = () => { $('appModal').classList.remove('show'); linkRender(); $('linkModal').classList.add('show'); };
+  $('linkOwnTest').onclick = () => {
+    const v = linkVal(); if (!/^[a-z][a-z0-9+.\-]*$/i.test(v)){ $('linkMsg').textContent = 'Letters, numbers, dots and dashes only.'; return; }
+    if (!tried.includes(v)){ tried.push(v); store.set('linkTried2', tried); }
+    linkRender(); openLink(v + '://');
+  };
+  $('linkOwn').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('linkOwnTest').click(); } });
+  $('linkUse').onclick = () => {
+    const v = linkVal(), l = $('linkFor').value; if (!v || !l) return;
+    apps = apps.map(([a, t]) => a === l ? [a, v + '://'] : [a, t]); store.set('apps', apps); appBar(); appRows(apps);
+    $('linkMsg').textContent = `${l} now opens ${v}://`;
+  };
+  $('appFind').onclick = () => { $('appModal').classList.remove('show'); linkRender(); $('linkModal').classList.add('show'); setTimeout(() => $('linkOwn').focus(), 50); };
   $('linkDone').onclick = () => { $('linkModal').classList.remove('show'); };
-  $('linkOwnTest').onclick = () => { const v = $('linkOwn').value.trim(); if (okLink(v)) openLink(v); };
 
   /* ---------- Update button ---------- */
   $('appUpdate').onclick = async () => {
