@@ -222,7 +222,8 @@
   .nrow .btn.small{min-width:0}
   .nsync{margin-left:auto;display:flex;gap:6px}
   a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:inherit}
-  .nmeta{font-size:12px;color:var(--dim);margin-top:8px}
+  .nsyncrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .nmeta{font-size:12px;color:var(--dim);flex:1;min-width:180px}
   .nmeta .ok{color:var(--green)} .nmeta .bad{color:var(--red)}
   .ntitle{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:8px}
   .ntext{font-size:16px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;-webkit-user-select:text;user-select:text}
@@ -247,7 +248,6 @@
   .nta{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px;font:14px/1.4 ui-monospace,monospace}
   body.compact .nrow .num.sel.dd{height:38px;font-size:15px}
   body.compact .ntext{font-size:15px}
-  @container (max-width: 520px){ .nsync{margin-left:0;width:100%} }
 
   /* Calculator */
   .calc{max-width:560px;width:100%;margin:0 auto}
@@ -532,17 +532,17 @@
         <span class="grp"><span class="unit">DEP</span><select class="num sel dd" id="nDep"></select></span>
         <button class="btn small" id="nSwap" aria-label="Swap departure and destination">⇄</button>
         <span class="grp"><span class="unit">DEST</span><select class="num sel dd" id="nDest"></select></span>
-        <span class="nsync">
-          <a class="btn small" id="nRun" href="shortcuts://run-shortcut?name=Sync%20Flight%20Notes">1 · Sync</a>
-          <button class="btn small" id="nPaste">2 · Paste</button>
-        </span>
       </div>
-      <div class="nmeta" id="nMeta"></div>
     </div>
 
     <div class="card" id="nBody"></div>
 
     <div class="card">
+      <div class="nsyncrow">
+        <a class="btn small" id="nRun" href="shortcuts://run-shortcut?name=Sync%20Flight%20Notes">1 · Sync</a>
+        <button class="btn small" id="nPaste">2 · Paste</button>
+        <div class="nmeta" id="nMeta"></div>
+      </div>
       <details id="nHelp">
         <summary class="label">Set up the “Sync Flight Notes” shortcut (once)</summary>
         <ol class="nsteps">
@@ -1270,7 +1270,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v24 · ' + w + '×' + h;
+    $('ver').textContent = 'v25 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
