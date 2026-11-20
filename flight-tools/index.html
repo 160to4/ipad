@@ -1285,7 +1285,10 @@
     const isWpt = (t, i) => t && !isApt(t, i) && !isAwy(t) && !isProc(t) && base(t) !== 'DCT';
     const hl = toks.map(() => false);
     const first = toks.findIndex((t, i) => isWpt(t, i)); if (first >= 0) hl[first] = true;
+    const isLatLon = t => /^\d{2,4}[NS]\d{3,5}[EW]$/.test(base(t)) || /^\d{4}[NS]$|^\d{2}[NS]\d{2}$/.test(base(t));
     toks.forEach((t, i) => {
+      // lat/long points, and any waypoint straight after another waypoint (implied direct), count as DCT waypoints
+      if (isWpt(t, i) && (isLatLon(t) || isWpt(toks[i-1], i-1))) hl[i] = true;
       if (base(t) === 'DCT'){ hl[i] = true; if (isWpt(toks[i+1], i+1)) hl[i+1] = true; return; }
       if (!isAwy(t)) return;
       if (!(i >= 2 && base(toks[i-2]) === base(t))) hl[i] = true;                 // first of a run of the same airway
@@ -1628,7 +1631,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v33 · ' + w + '×' + h;
+    $('ver').textContent = 'v34 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
