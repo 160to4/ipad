@@ -99,6 +99,13 @@
   .err{color:var(--red);font-weight:600}
 
 
+  /* ---------- Extra right margin: the iPad window runs slightly off the right edge ---------- */
+  :root{--edge-r:28px}
+  header{padding-right:calc(16px + var(--edge-r) + env(safe-area-inset-right)) !important}
+  main{padding-right:calc(16px + var(--edge-r) + env(safe-area-inset-right)) !important}
+  body.compact header{padding-right:calc(10px + var(--edge-r)) !important}
+  body.compact main{padding-right:calc(10px + var(--edge-r)) !important}
+
   /* ---------- Header pad toggle ---------- */
   header{display:flex;align-items:center;gap:8px}
   header .tabs{flex:1}
@@ -115,7 +122,7 @@
     section.view{grid-column:1;grid-row:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     .card.pad{grid-column:2;grid-row:1;min-height:0}
     .canvaswrap{min-height:0}
-    #ver{position:fixed;right:14px;bottom:3px;padding:0 !important;pointer-events:none;z-index:4}
+    #ver{position:fixed;right:calc(14px + var(--edge-r));bottom:3px;padding:0 !important;pointer-events:none;z-index:4}
     body.nopad main{grid-template-columns:minmax(0,1fr)}
     body.nopad .card.pad{display:none}
   }
@@ -1079,7 +1086,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v19 · ' + w + '×' + h;
+    $('ver').textContent = 'v20 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
