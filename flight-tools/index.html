@@ -722,7 +722,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v49';   // bump with sw.js VERSION on every release
+  const APP_V = 'v50';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1833,7 +1833,12 @@
   };
   const siaGuesses = names => names.flatMap(n => [`sia.${n}://`, `sia-${n}://`, `sia${n}://`, `com.sia.${n}://`, `com.singaporeair.${n}://`]);
   const LINK_GUESSES = Object.fromEntries(Object.entries(SIA_NAMES).map(([l, ns]) => [l, siaGuesses(ns)]));
-  if (store.get('linkSet', 0) < 2){ store.set('linkTried', {}); store.set('linkSet', 2); }   // new guess list: clear the greyed-out marks
+  // Jeppesen apps: same family as FD Pro X (flitedeckx.jeppesen://)
+  const jeppGuesses = names => names.flatMap(n => [`${n}.jeppesen://`, `jeppesen.${n}://`, `com.jeppesen.${n}://`, `jeppesen${n}://`, `jeppesen-${n}://`]);
+  LINK_GUESSES['OPT'] = jeppGuesses(['opt', 'optx', 'onboardperformancetool', 'performance']).concat(['opt.boeing://', 'com.boeing.opt://']);
+  LINK_GUESSES['Aviator'] = jeppGuesses(['aviator', 'aviatorx', 'flitedeckaviator']);
+  LINK_GUESSES['FD pro'] = ['flitedeckx.jeppesen://', 'flitedeckpro.jeppesen://', 'flitedeck.jeppesen://', 'fdpro.jeppesen://', 'fd.jeppesen://', 'jeppesen.flitedeckpro://', 'com.jeppesen.flitedeckpro://'].concat(siaGuesses(['fdpro', 'flitedeck']));
+  if (store.get('linkSet', 0) < 3){ store.set('linkTried', {}); store.set('linkSet', 3); }   // new guess list: clear the greyed-out marks
   let tried = store.get('linkTried', {});
   function openLink(url){ const a = document.createElement('a'); a.href = url; a.target = '_top'; document.body.appendChild(a); a.click(); a.remove(); }
   function linkRender(){
