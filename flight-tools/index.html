@@ -226,6 +226,15 @@
   .nmeta .ok{color:var(--green)} .nmeta .bad{color:var(--red)}
   .ntitle{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:8px}
   .ntext{font-size:16px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;-webkit-user-select:text;user-select:text}
+  .ntext.html{white-space:normal}
+  .ntext.html p,.ntext.html div{margin:0;min-height:1em}
+  .ntext.html ul,.ntext.html ol{margin:4px 0;padding-left:22px}
+  .ntext.html h1,.ntext.html h2,.ntext.html h3{font-size:17px;margin:10px 0 4px;color:var(--text)}
+  .twrap{overflow-x:auto;margin:8px 0;-webkit-overflow-scrolling:touch}
+  .ntext table{border-collapse:collapse;font-size:15px;line-height:1.35}
+  .ntext td,.ntext th{border:1px solid #39434f;padding:6px 10px;vertical-align:top;text-align:left;min-width:40px}
+  .ntext tr:first-child td,.ntext th{background:var(--panel2);font-weight:600}
+  body.compact .ntext table{font-size:13px} body.compact .ntext td{padding:4px 7px}
   .nsep{border:0;border-top:1px solid var(--line);margin:14px 0}
   .nempty{color:var(--dim);font-size:15px}
   .nroutes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
@@ -538,9 +547,10 @@
         <summary class="label">Set up the “Sync Flight Notes” shortcut (once)</summary>
         <ol class="nsteps">
           <li>Open <b>Shortcuts</b> → <b>+</b> → name it exactly <b>Sync Flight Notes</b>.</li>
-          <li>Add <b>Find Notes</b>. Leave it as “All Notes” — or tap <i>Add Filter</i> → <b>Folder</b> is your flight-notes folder (faster).</li>
+          <li>Add <b>Find Notes</b> → <i>Add Filter</i> → <b>Folder</b> is your flight-notes folder (or <b>Name</b> contains <b>-</b>). If iPadOS says it’s too many items: Settings → Apps → Shortcuts → Advanced → Allow Sharing Large Amounts of Data.</li>
           <li>Add <b>Repeat with Each</b> (it uses the Notes from step 2).</li>
-          <li>Inside the repeat, add <b>Text</b> and type <b>&lt;&lt;&lt;NOTE&gt;&gt;&gt;</b>, then a new line, then insert the variable <b>Repeat Item</b> → tap it → choose <b>Name</b>. New line again, insert <b>Repeat Item</b> → <b>Body</b>.</li>
+          <li>Inside the repeat, add <b>Make HTML from Rich Text</b> with <b>Repeat Item</b> as its input (turn <i>Make Full Document</i> off). This keeps tables and formatting.</li>
+          <li>Below it (still inside the repeat), add <b>Text</b> and type <b>&lt;&lt;&lt;NOTE&gt;&gt;&gt;</b>, then a new line, then insert the variable <b>Repeat Item</b> → tap it → choose <b>Name</b>. New line again, then insert <b>HTML from Rich Text</b>.</li>
           <li>After <i>End Repeat</i>, add <b>Combine Text</b> (Repeat Results, combine with <b>New Lines</b>).</li>
           <li>Add <b>Copy to Clipboard</b>. Done.</li>
         </ol>
@@ -976,6 +986,32 @@
     return true;
   }
   const esc = t => t.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
+  // Notes exported as HTML (keeps tables): show it, but only allow plain formatting tags — no scripts, styles or links.
+  const isHTML = t => /<(table|div|p|br|ul|ol|li|b|i|u|strong|em|span|h[1-6]|font|tt)[\s>\/]/i.test(t);
+  const OK_TAGS = new Set(['TABLE','THEAD','TBODY','TR','TD','TH','B','STRONG','I','EM','U','S','STRIKE','BR','P','DIV','UL','OL','LI','H1','H2','H3','H4','SPAN','SUB','SUP','TT','FONT','BLOCKQUOTE','PRE','CODE']);
+  function cleanHTML(html, title){
+    const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
+    (function walk(node){
+      [...node.childNodes].forEach(n => {
+        if (n.nodeType === 3) return;
+        if (n.nodeType !== 1){ n.remove(); return; }
+        if (!OK_TAGS.has(n.tagName)){
+          if (['SCRIPT','STYLE','HEAD','META','TITLE','LINK','IFRAME','OBJECT','IMG','SVG','MATH'].includes(n.tagName)) n.remove();
+          else { walk(n); n.replaceWith(...n.childNodes); }
+          return;
+        }
+        [...n.attributes].forEach(a => { if (!['colspan','rowspan'].includes(a.name)) n.removeAttribute(a.name); });
+        walk(n);
+      });
+    })(doc.body);
+    // drop the title if the note repeats it as its first line
+    const first = [...doc.body.childNodes].find(n => n.textContent.trim() !== '');
+    if (first && first.textContent.trim() === title.trim()) first.remove();
+    doc.body.querySelectorAll('table').forEach(t => { const w = doc.createElement('div'); w.className = 'twrap'; t.replaceWith(w); w.appendChild(t); });
+    return doc.body.innerHTML.trim();
+  }
+  const noteHTML = n => isHTML(n.body) ? `<div class="ntext html">${cleanHTML(n.body, n.title) || '<span class="nempty">(empty note)</span>'}</div>`
+                                       : `<div class="ntext">${esc(n.body) || '<span class="nempty">(empty note)</span>'}</div>`;
   function nMeta(prefix){
     const when = notes.at ? new Date(notes.at).toLocaleString([], {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : null;
     $('nMeta').innerHTML = (prefix ? prefix + ' ' : '') + (when ? `${notes.list.length} notes on this iPad · last synced ${when}` : 'No notes synced yet — see setup below.');
@@ -1007,7 +1043,7 @@
     const routes = [...new Set(notes.list.map(n => n.route))].sort();
     const chips = routes.length ? `<div class="nroutes">${routes.map(r => `<button data-r="${r}" class="${route && r === route.split('-').reverse().join('-') ? 'rev' : ''}">${r.replace('-', '→')}</button>`).join('')}</div>` : '';
     if (hits.length){
-      box.innerHTML = hits.map(n => `<div class="ntitle">${esc(n.title)}</div><div class="ntext">${esc(n.body) || '<span class="nempty">(empty note)</span>'}</div>`).join('<hr class="nsep">');
+      box.innerHTML = hits.map(n => `<div class="ntitle">${esc(n.title)}</div>${noteHTML(n)}`).join('<hr class="nsep">');
     } else {
       const rev = route ? notes.list.some(n => n.route === route.split('-').reverse().join('-')) : false;
       box.innerHTML = `<div class="nempty">${!notes.list.length ? 'No notes synced yet.' : !route ? 'Pick DEP and DEST, or tap a route:' :
@@ -1232,7 +1268,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v21 · ' + w + '×' + h;
+    $('ver').textContent = 'v22 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
