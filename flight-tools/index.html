@@ -100,7 +100,7 @@
 
 
   /* ---------- Extra right margin: the iPad window runs slightly off the right edge ---------- */
-  :root{--edge-r:28px}
+  :root{--edge-r:0px}
   header{padding-right:calc(16px + var(--edge-r) + env(safe-area-inset-right)) !important}
   main{padding-right:calc(16px + var(--edge-r) + env(safe-area-inset-right)) !important}
   body.compact header{padding-right:calc(10px + var(--edge-r)) !important}
@@ -1268,7 +1268,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v22 · ' + w + '×' + h;
+    $('ver').textContent = 'v23 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
