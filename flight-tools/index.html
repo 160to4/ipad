@@ -1431,13 +1431,22 @@
     $('crTaxi').textContent = crOfp.taxi;
     const t = ((+crOfp.std.slice(0,2) * 60 + +crOfp.std.slice(2) + crOfp.taxi) % 1440 + 1440) % 1440;
     $('crTo').value = pad2(Math.floor(t/60)) + ':' + pad2(t % 60); $('crTo').classList.remove('bad'); crCalc();
+    ctFromOfp();
+  }
+  // CD tab default: countdown to STD + taxi + flight time (OFP times are UTC → shown in the iPad's local time)
+  function ctFromOfp(){
+    if (!crOfp.std || crOfp.ft == null || ct.target != null) return;   // never touch a running countdown
+    const utcMin = +crOfp.std.slice(0,2) * 60 + +crOfp.std.slice(2) + crOfp.taxi + crOfp.ft;
+    const d = new Date(); d.setUTCHours(0, 0, 0, 0); d.setUTCMinutes(utcMin);
+    ct.time = pad2(d.getHours()) + ':' + pad2(d.getMinutes()); ct.fromOfp = true;
+    $('ctTime').value = ct.time; $('ctTime').classList.remove('bad'); ctSave();
   }
   const crTaxiStep = k => { crOfp.taxi = Math.max(0, Math.min(120, crOfp.taxi + k)); store.set('crOfp', crOfp); crApplyTo(); };
   $('crTaxiM').onclick = () => crTaxiStep(-1);
   $('crTaxiP').onclick = () => crTaxiStep(1);
   function ofpToRest(d){
     if (!d) return;
-    if (d.ft){ const [h, m] = d.ft.split('.').map(Number); if (!isNaN(h) && !isNaN(m)){ $('crFh').value = h; $('crFm').value = pad2(m); } }
+    if (d.ft){ const [h, m] = d.ft.split('.').map(Number); if (!isNaN(h) && !isNaN(m)){ $('crFh').value = h; $('crFm').value = pad2(m); crOfp.ft = h * 60 + m; store.set('crOfp', crOfp); } }
     if (d.std && /^\d{4}$/.test(d.std)){ crOfp.std = d.std; store.set('crOfp', crOfp); crApplyTo(); } else crCalc();
   }
   if (crOfp.std){ $('crFromOfp').style.display = ''; $('crStd').textContent = 'STD ' + crOfp.std.slice(0,2) + ':' + crOfp.std.slice(2); $('crTaxi').textContent = crOfp.taxi; }
@@ -1474,19 +1483,19 @@
   ['paDep','paDest'].forEach(id => $(id).addEventListener('change', () => { nFill(); nRender(); }));
 
   /* ---------- Countdown to a clock time ---------- */
-  const ct = store.get('ct', {target:null, time:''});
+  const ct = store.get('ct', {target:null, time:'', fromOfp:false});
   ct.alarmed = ct.target != null && Date.now() >= ct.target; // expired while away: no alarm on reopen
   const hm = d => pad2(d.getHours()) + ':' + pad2(d.getMinutes());
   if (!ct.time){ const d = new Date(Date.now() + 30*60000); ct.time = hm(d); }
   $('ctTime').value = ct.time;
-  function ctSave(){ store.set('ct', {target:ct.target, time:ct.time}); }
+  function ctSave(){ store.set('ct', {target:ct.target, time:ct.time, fromOfp:!!ct.fromOfp}); }
   function ctTargetFrom(val){              // next occurrence of HH:MM (today, else tomorrow)
     const [h, m] = (val || '00:00').split(':').map(Number);
     const t = new Date(); t.setHours(h, m, 0, 0);
     if (t.getTime() <= Date.now()) t.setDate(t.getDate() + 1);
     return t.getTime();
   }
-  bind24($('ctTime'), v => { if (v){ ct.time = v; ctSave(); } });
+  bind24($('ctTime'), v => { if (v && v !== ct.time){ ct.time = v; ct.fromOfp = false; ctSave(); } });
   $('ctStart').onclick = () => {
     unlockAudio();
     ct.time = read24($('ctTime')) || ct.time; $('ctTime').value = ct.time; $('ctTime').classList.remove('bad');
@@ -1504,7 +1513,7 @@
     $('ctClock').className = 'clock mid ' + (over ? 'over' + (alarmTimer ? ' flash' : '') : run ? 'running' : 'paused');
     $('ctSub').textContent = over ? 'Overrun since ' + hm(new Date(ct.target)) :
       run ? 'Counting down to ' + hm(new Date(ct.target)) + (tomorrow ? ' (tomorrow)' : '') :
-      'Preview to ' + hm(new Date(target)) + (tomorrow ? ' (tomorrow)' : '') + ' · tap Start';
+      'Preview to ' + hm(new Date(target)) + (tomorrow ? ' (tomorrow)' : '') + (ct.fromOfp && (read24($('ctTime')) || ct.time) === ct.time ? ' · OFP STD + taxi + flight time' : '') + ' · tap Start';
     $('ctStart').textContent = run ? 'Restart' : 'Start';
   }
 
@@ -1676,7 +1685,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v41 · ' + w + '×' + h;
+    $('ver').textContent = 'v42 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
