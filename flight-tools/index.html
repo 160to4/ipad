@@ -1186,6 +1186,27 @@
       }
     }
     ofpFallback(o);
+    // Route from page 1: the line starting with the departure ICAO code, through to the line with the destination ICAO code
+    if (o.hdr && o.hdr.depI && o.hdr.arrI){
+      const L1 = (o._lines || []).filter(x => x.p <= 2).map(x => x.l);
+      const dep = o.hdr.depI, arr = o.hdr.arrI;
+      for (let i = 0; i < L1.length && !o.route1; i++){
+        const toks = L1[i].trim().split(/\s+/);
+        if (toks[0].replace(/\/.*$/, '') !== dep || /\bSIA\s+\d+\//.test(L1[i])) continue;
+        const parts = [];
+        for (let j = i; j < Math.min(i + 10, L1.length); j++){
+          parts.push(L1[j].trim());
+          const tk = L1[j].trim().split(/\s+/).map(t => t.replace(/\/.*$/, ''));
+          if (tk.includes(arr) && (j > i || tk.lastIndexOf(arr) > 0)){
+            const r = parts.join(' ').replace(/\s+/g, ' ');
+            const end = r.lastIndexOf(arr);
+            const route = r.slice(0, end + arr.length + (r.slice(end + arr.length).match(/^\/\S*/) || [''])[0].length);
+            if (route.split(' ').length >= 3) o.route1 = route;
+            break;
+          }
+        }
+      }
+    }
     delete o._lines;
     // Route = field 15 of the ICAO flight plan: after the cruise speed/level (e.g. N0488F350), up to "-DEST0000"
     if (o._fpl){
@@ -1326,7 +1347,7 @@
         ${ofpField('Reserves · ALTN', d.reserves != null || d.altn ? `${tn(d.reserves) || '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null)}
         ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn add / less', ba)}
-        ${ofpField('Route', d.route ? ofpEsc(d.route) : null, false, 'route')}
+        ${ofpField('Route', d.route1 || d.route ? ofpEsc(d.route1 || d.route) : null, false, 'route')}
       </div>`;
     $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
     // stepper events
@@ -1351,7 +1372,7 @@
       ofp.recent = [{id, label, name: f.name, at: Date.now(), data: d}, ...ofp.recent.filter(r => r.label !== label)].slice(0, 10);
       ofp.cur = id; store.set('ofp', ofp);
       const keys = ['flight','plan','reg','apd','std','sta','ft','pzfw','ptow','burn','cont','excess','reserves','altn','fit','taxiKg','route'];
-      const found = keys.filter(k => d[k] != null && d[k] !== '').length;
+      const found = keys.filter(k => k === 'route' ? (d.route1 || d.route) : d[k] != null && d[k] !== '').length;
       $('ofpMeta').textContent = `${f.name} · ${d.pages} pages · ${found}/${keys.length} values found`;
       ofpRender();
     }catch(err){
@@ -1573,7 +1594,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v31 · ' + w + '×' + h;
+    $('ver').textContent = 'v32 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
