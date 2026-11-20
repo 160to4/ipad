@@ -722,7 +722,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v51';   // bump with sw.js VERSION on every release
+  const APP_V = 'v52';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1789,13 +1789,14 @@
   const APP_DEFAULTS = [
     ['FD pro','flitedeckx.jeppesen://'], ['OPT','opt.boeing://'], ['eWAS','ewas://'], ['ELB','shortcut:Open ELB'],
     ['Sign','shortcut:Open PilotSign'], ['Aviator','shortcut:Open Aviator'], ['Pulse','shortcut:Open FlightPulse'],
-    ['Orlando','shortcut:Open Orlando'], ['AXIS','shortcut:Open AXIS']
+    ['Orlando','orlando://'], ['AXIS','shortcut:Open AXIS']
   ];
   if (store.get('appsSet', 0) < 2){ store.set('apps', APP_DEFAULTS); store.set('appsSet', 2); }   // one-time switch to these defaults
   // confirmed working links (set on existing buttons too)
-  const APP_FOUND = {'OPT': 'opt.boeing://', 'eWAS': 'ewas://'};
+  const APP_FOUND = {'OPT': 'opt.boeing://', 'eWAS': 'ewas://', 'Orlando': 'orlando://'};
   if (store.get('appsSet', 0) < 3){ store.set('apps', store.get('apps', APP_DEFAULTS).map(([l, t]) => l === 'FD pro' && t === 'shortcut:Open FD Pro' ? [l, 'flitedeckx.jeppesen://'] : [l, t])); store.set('appsSet', 3); }
-  if (store.get('appsSet', 0) < 4){ store.set('apps', store.get('apps', APP_DEFAULTS).map(([l, t]) => APP_FOUND[l] && t.startsWith('shortcut:') ? [l, APP_FOUND[l]] : [l, t])); store.set('appsSet', 4); }
+  if (store.get('appsSet', 0) === 4) store.set('appsSet', 3);   // re-run the link update once (Orlando added)
+  if (store.get('appsSet', 0) < 5){ store.set('apps', store.get('apps', APP_DEFAULTS).map(([l, t]) => APP_FOUND[l] && t.startsWith('shortcut:') ? [l, APP_FOUND[l]] : [l, t])); store.set('appsSet', 5); }
   let apps = store.get('apps', APP_DEFAULTS);
   let appOn = store.get('appOn', '');   // label of the last app opened from the bar (shown in yellow)
   const appHref = t => t.startsWith('shortcut:') ? 'shortcuts://run-shortcut?name=' + encodeURIComponent(t.slice(9).trim()) : t;
