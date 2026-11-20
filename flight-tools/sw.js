@@ -1,6 +1,6 @@
 // Flight Deck Tools — offline cache.
 // Bump VERSION whenever any file changes so devices pick up the update.
-const VERSION = 'fdt-v25';
+const VERSION = 'fdt-v26';
 const FILES = [
   './',
   './index.html',
@@ -8,7 +8,9 @@ const FILES = [
   './apple-touch-icon.png',
   './icon-192.png',
   './icon-512.png',
-  './icon-maskable-512.png'
+  './icon-maskable-512.png',
+  './lib/pdf.min.js',
+  './lib/pdf.worker.min.js'
 ];
 
 self.addEventListener('install', e => {
