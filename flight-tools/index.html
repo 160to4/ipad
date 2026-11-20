@@ -356,13 +356,13 @@
 <body>
 <header>
   <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="ofp">OFP</button>
     <button class="tab" role="tab" data-view="stopwatch">Timer <i class="dot" id="dotSw"></i></button>
-    <button class="tab" role="tab" data-view="countdown">Countdown <i class="dot" id="dotCd"></i></button>
+    <button class="tab" role="tab" data-view="countdown">CD <i class="dot" id="dotCd"></i></button>
     <button class="tab" role="tab" data-view="calc">Calc</button>
-    <button class="tab" role="tab" data-view="crew-rest">Crew Rest</button>
+    <button class="tab" role="tab" data-view="crew-rest">Rest</button>
     <button class="tab" role="tab" data-view="pa">PA</button>
     <button class="tab" role="tab" data-view="notes">Notes</button>
-    <button class="tab" role="tab" data-view="ofp">OFP</button>
   </nav>
   <button class="padbtn" id="padToggle" aria-label="Show or hide scratchpad" title="Scratchpad">✎</button>
 </header>
@@ -662,7 +662,7 @@
   }
 
   /* ---------- Tabs (hash routing) ---------- */
-  const views = ['stopwatch','countdown','calc','crew-rest','pa','notes','ofp'];
+  const views = ['ofp','stopwatch','countdown','calc','crew-rest','pa','notes'];
   function show(name){
     if (!views.includes(name)) name = store.get('tab','stopwatch');
     if (!views.includes(name)) name = 'stopwatch';
@@ -1491,7 +1491,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v28 · ' + w + '×' + h;
+    $('ver').textContent = 'v29 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
