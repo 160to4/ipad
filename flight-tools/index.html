@@ -733,7 +733,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v57';   // bump with sw.js VERSION on every release
+  const APP_V = 'v58';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1799,12 +1799,12 @@
   // Default buttons: [label, link]. "shortcut:Open X" runs the Shortcut named "Open X" (Shortcuts → Open App → X).
   const APP_DEFAULTS = [
     ['FD pro','flitedeckx.jeppesen://'], ['OPT','opt.boeing://'], ['eWAS','ewas://'], ['ELB','shortcut:Open ELB'],
-    ['Sign','shortcut:Open PilotSign'], ['Aviator','shortcut:Open Aviator'], ['Pulse','flightpulse://'],
+    ['Sign','shortcut:Open PilotSign'], ['Aviator','iavdashboard://'], ['Pulse','flightpulse://'],
     ['Orlando','orlando://'], ['AXIS','shortcut:Open AXIS']
   ];
   if (store.get('appsSet', 0) < 2){ store.set('apps', APP_DEFAULTS); store.set('appsSet', 2); }   // one-time switch to these defaults
   // confirmed working links (set on existing buttons too)
-  const APP_FOUND = {'FD pro': 'flitedeckx.jeppesen://', 'OPT': 'opt.boeing://', 'eWAS': 'ewas://', 'Orlando': 'orlando://', 'Pulse': 'flightpulse://'};
+  const APP_FOUND = {'FD pro': 'flitedeckx.jeppesen://', 'OPT': 'opt.boeing://', 'eWAS': 'ewas://', 'Orlando': 'orlando://', 'Pulse': 'flightpulse://', 'Aviator': 'iavdashboard://'};
   if (store.get('appsSet', 0) < 3){ store.set('apps', store.get('apps', APP_DEFAULTS).map(([l, t]) => l === 'FD pro' && t === 'shortcut:Open FD Pro' ? [l, 'flitedeckx.jeppesen://'] : [l, t])); store.set('appsSet', 3); }
   // whenever the list of confirmed links grows, swap any remaining Shortcut buttons over to them
   if (store.get('appsFound', '') !== JSON.stringify(APP_FOUND)){
