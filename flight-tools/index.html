@@ -722,7 +722,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v53';   // bump with sw.js VERSION on every release
+  const APP_V = 'v54';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1833,24 +1833,32 @@
   appBar();
 
   /* ---------- Link tester: guess app link addresses ---------- */
-  // Guesses in the form sia.<appname>:// (plus close variants)
-  const SIA_NAMES = {
-    'FD pro': ['fdpro', 'flitedeck', 'flitedeckpro', 'fd'], 'OPT': ['opt'], 'eWAS': ['ewas'], 'ELB': ['elb'],
-    'Sign': ['pilotsign', 'sign'], 'Aviator': ['aviator'], 'Pulse': ['flightpulse', 'pulse'], 'Orlando': ['orlando'], 'AXIS': ['axis']
+  // Guesses for the apps still without a confirmed link: airline (SQ / SIA / singaporeair) styles + vendor styles
+  const LINK_NAMES = {
+    'FD pro': ['fdpro', 'flitedeck', 'flitedeckpro', 'fd'], 'ELB': ['elb', 'elogbook', 'techlog'],
+    'Sign': ['pilotsign', 'sign', 'psign'], 'Aviator': ['aviator'], 'AXIS': ['axis']
   };
-  const siaGuesses = names => names.flatMap(n => [`sia.${n}://`, `sia-${n}://`, `sia${n}://`, `com.sia.${n}://`, `com.singaporeair.${n}://`]);
-  const LINK_GUESSES = Object.fromEntries(Object.entries(SIA_NAMES).map(([l, ns]) => [l, siaGuesses(ns)]));
-  // Jeppesen apps: same family as FD Pro X (flitedeckx.jeppesen://)
-  const jeppGuesses = names => names.flatMap(n => [`${n}.jeppesen://`, `jeppesen.${n}://`, `com.jeppesen.${n}://`, `jeppesen${n}://`, `jeppesen-${n}://`]);
-  LINK_GUESSES['OPT'] = jeppGuesses(['opt', 'optx', 'onboardperformancetool', 'performance']).concat(['opt.boeing://', 'com.boeing.opt://']);
-  LINK_GUESSES['Aviator'] = jeppGuesses(['aviator', 'aviatorx', 'flitedeckaviator']);
-  LINK_GUESSES['FD pro'] = ['flitedeckx.jeppesen://', 'flitedeckpro.jeppesen://', 'flitedeck.jeppesen://', 'fdpro.jeppesen://', 'fd.jeppesen://', 'jeppesen.flitedeckpro://', 'com.jeppesen.flitedeckpro://'].concat(siaGuesses(['fdpro', 'flitedeck']));
+  const airlineGuesses = n => [
+    `sq.${n}`, `sia.${n}`, `sq${n}`, `sia${n}`, `sq-${n}`, `sia-${n}`, `${n}.sq`, `${n}.sia`, `${n}sq`, `${n}sia`,
+    `singaporeair.${n}`, `${n}.singaporeair`, `singaporeair${n}`, `singaporeairlines.${n}`,
+    `com.singaporeair.${n}`, `com.sia.${n}`, `com.sq.${n}`, `com.singaporeairlines.${n}`,
+    `sg.com.singaporeair.${n}`, `sg.com.sia.${n}`, `sg.com.sq.${n}`,
+    `${n}.singaporeair.com.sg`, `${n}.sia.com.sg`, `${n}.singaporeair.com`, `sia.com.sg.${n}`, `singaporeair.com.sg.${n}`
+  ].map(g => g + '://');
+  const vendorGuesses = {
+    'FD pro': ['flitedeckx.jeppesen', 'flitedeckpro.jeppesen', 'flitedeck.jeppesen', 'fdpro.jeppesen', 'jeppesen.flitedeckpro', 'com.jeppesen.flitedeckpro', 'flitedeck.boeing', 'fdpro.boeing', 'flitedeckpro.boeing', 'fdx.jeppesen', 'jeppfdpro', 'flitedeckprox'],
+    'Aviator': ['aviator.jeppesen', 'aviator.boeing', 'jeppesen.aviator', 'com.jeppesen.aviator', 'com.boeing.aviator', 'boeing.aviator', 'aviatorx.jeppesen'],
+    'ELB': ['elb.boeing', 'elb.ultramain', 'ultramain.elb', 'elb.navblue', 'elogbook.boeing'],
+    'Sign': ['pilotsign.boeing'], 'AXIS': ['axis.boeing', 'axis.jeppesen']
+  };
+  const LINK_GUESSES = Object.fromEntries(Object.entries(LINK_NAMES).map(([l, ns]) =>
+    [l, [...new Set((vendorGuesses[l] || []).map(g => g + '://').concat(ns.flatMap(airlineGuesses)))]]));
   if (store.get('linkSet', 0) < 3){ store.set('linkTried', {}); store.set('linkSet', 3); }   // new guess list: clear the greyed-out marks
   let tried = store.get('linkTried', {});
   function openLink(url){ const a = document.createElement('a'); a.href = url; a.target = '_top'; document.body.appendChild(a); a.click(); a.remove(); }
   function linkRender(){
     const labels = apps.map(a => a[0]);
-    const names = Object.keys(LINK_GUESSES).filter(l => labels.includes(l)).concat(labels.filter(l => !LINK_GUESSES[l]));
+    const names = Object.keys(LINK_GUESSES).filter(l => labels.includes(l) && !APP_FOUND[l]);
     $('linkRows').innerHTML = names.map(l => {
       const cur = (apps.find(a => a[0] === l) || [])[1] || '';
       const guesses = (LINK_GUESSES[l] || [l.toLowerCase().replace(/[^a-z0-9]/g,'') + '://']);
