@@ -215,6 +215,31 @@
     .rp .times{font-size:16px}
   }
 
+  /* Notes */
+  .nrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .nrow .num.sel.dd{width:auto;min-width:0;height:44px;font-size:18px;padding:0 30px 0 10px;
+    background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
+  .nrow .btn.small{min-width:0}
+  .nsync{margin-left:auto;display:flex;gap:6px}
+  a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:inherit}
+  .nmeta{font-size:12px;color:var(--dim);margin-top:8px}
+  .nmeta .ok{color:var(--green)} .nmeta .bad{color:var(--red)}
+  .ntitle{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:8px}
+  .ntext{font-size:16px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;-webkit-user-select:text;user-select:text}
+  .nsep{border:0;border-top:1px solid var(--line);margin:14px 0}
+  .nempty{color:var(--dim);font-size:15px}
+  .nroutes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .nroutes button{min-height:34px;padding:0 12px;border-radius:17px;background:var(--bg);border:1px solid var(--line);color:var(--text);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  .nroutes button.rev{border-color:var(--amber)}
+  details summary{cursor:pointer;list-style:none} details summary::-webkit-details-marker{display:none}
+  details summary::before{content:'▸ '} details[open] summary::before{content:'▾ '}
+  .nsteps{margin:10px 0 8px;padding-left:20px;font-size:14px;line-height:1.5}
+  .nsteps li{margin-bottom:4px}
+  .nta{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px;font:14px/1.4 ui-monospace,monospace}
+  body.compact .nrow .num.sel.dd{height:38px;font-size:15px}
+  body.compact .ntext{font-size:15px}
+  @container (max-width: 520px){ .nsync{margin-left:0;width:100%} }
+
   /* Calculator */
   .calc{max-width:560px;width:100%;margin:0 auto}
   .cdisp{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;text-align:right;margin-bottom:12px}
@@ -300,6 +325,7 @@
     <button class="tab" role="tab" data-view="calc">Calc</button>
     <button class="tab" role="tab" data-view="crew-rest">Crew Rest</button>
     <button class="tab" role="tab" data-view="pa">PA</button>
+    <button class="tab" role="tab" data-view="notes">Notes</button>
   </nav>
   <button class="padbtn" id="padToggle" aria-label="Show or hide scratchpad" title="Scratchpad">✎</button>
 </header>
@@ -490,6 +516,45 @@
     </div>
   </section>
 
+  <!-- ============ NOTES (from Apple Notes via Shortcuts) ============ -->
+  <section class="view" id="view-notes">
+    <div class="card">
+      <div class="nrow">
+        <span class="unit">DEP</span><select class="num sel dd" id="nDep"></select>
+        <button class="btn small" id="nSwap" aria-label="Swap departure and destination">⇄</button>
+        <span class="unit">DEST</span><select class="num sel dd" id="nDest"></select>
+        <span class="nsync">
+          <a class="btn small" id="nRun" href="shortcuts://run-shortcut?name=Sync%20Flight%20Notes">1 · Sync</a>
+          <button class="btn small" id="nPaste">2 · Paste</button>
+        </span>
+      </div>
+      <div class="nmeta" id="nMeta"></div>
+    </div>
+
+    <div class="card" id="nBody"></div>
+
+    <div class="card">
+      <details id="nHelp">
+        <summary class="label">Set up the “Sync Flight Notes” shortcut (once)</summary>
+        <ol class="nsteps">
+          <li>Open <b>Shortcuts</b> → <b>+</b> → name it exactly <b>Sync Flight Notes</b>.</li>
+          <li>Add <b>Find Notes</b>. Leave it as “All Notes” — or tap <i>Add Filter</i> → <b>Folder</b> is your flight-notes folder (faster).</li>
+          <li>Add <b>Repeat with Each</b> (it uses the Notes from step 2).</li>
+          <li>Inside the repeat, add <b>Text</b> and type <b>&lt;&lt;&lt;NOTE&gt;&gt;&gt;</b>, then a new line, then insert the variable <b>Repeat Item</b> → tap it → choose <b>Name</b>. New line again, insert <b>Repeat Item</b> → <b>Body</b>.</li>
+          <li>After <i>End Repeat</i>, add <b>Combine Text</b> (Repeat Results, combine with <b>New Lines</b>).</li>
+          <li>Add <b>Copy to Clipboard</b>. Done.</li>
+        </ol>
+        <p class="unit">Then: tap <b>1 · Sync</b> → when Shortcuts finishes, come back here → tap <b>2 · Paste</b> → tap the <b>Paste</b> bubble iPadOS shows. Notes are saved on this iPad and work offline. Re-sync after you edit notes.</p>
+        <p class="unit">Titles are matched on the two 3-letter codes, e.g. “12 SIN-AMS”, “12. SIN-AMS” or “SIN-AMS” → SIN→AMS. Numbers in front are ignored.</p>
+      </details>
+      <div id="nManual" style="display:none;margin-top:10px">
+        <div class="unit" style="margin-bottom:6px">Couldn’t read the clipboard automatically — long-press in the box, choose Paste, then tap Save.</div>
+        <textarea id="nTa" rows="4" class="nta"></textarea>
+        <div class="btns" style="justify-content:flex-start"><button class="btn small" id="nTaSave">Save</button><button class="btn small ghost" id="nTaCancel">Cancel</button></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ SHARED SCRATCHPAD (same on every tab) ============ -->
   <div class="card pad" data-pad="shared"></div>
 </main>
@@ -546,7 +611,7 @@
   }
 
   /* ---------- Tabs (hash routing) ---------- */
-  const views = ['stopwatch','countdown','calc','crew-rest','pa'];
+  const views = ['stopwatch','countdown','calc','crew-rest','pa','notes'];
   function show(name){
     if (!views.includes(name)) name = store.get('tab','stopwatch');
     if (!views.includes(name)) name = 'stopwatch';
@@ -852,7 +917,7 @@
   $('paClear').onclick = () => {
     if (!paClrArm){ paClrArm = true; $('paClear').textContent = 'Tap again to clear'; setTimeout(()=>{ paClrArm=false; $('paClear').textContent='Clear inputs'; }, 2000); return; }
     paClrArm = false; $('paClear').textContent = 'Clear inputs';
-    Object.assign(pa, PA_DEF); paSave(); paLoad(); paRender();
+    Object.assign(pa, PA_DEF); paSave(); paLoad(); paRender(); if (typeof nFill === 'function'){ nFill(); nRender(); }
   };
 
   const hm24 = mins => { const d = Math.floor(mins/1440), m = ((mins%1440)+1440)%1440;
@@ -884,6 +949,87 @@
     $('paScpSay').textContent = pa.scp ? SCP_LINES[pa.scp] : '';
   }
   paLoad(); paRender(); paClock();
+
+  /* ---------- Notes (pasted from Apple Notes via the "Sync Flight Notes" shortcut) ---------- */
+  const NOTE_MARK = '<<<NOTE>>>';
+  let notes = store.get('notes', {list: [], at: 0});
+  const routeOf = title => { const m = (title || '').toUpperCase().match(/\b([A-Z]{3})\s*[-–—>→]+\s*([A-Z]{3})\b/); return m ? m[1] + '-' + m[2] : null; };
+  function parseNotes(txt){
+    const out = [];
+    txt.replace(/\r\n?/g, '\n').split(NOTE_MARK).forEach(chunk => {
+      const lines = chunk.replace(/^\n+/, '').split('\n');
+      const title = (lines.shift() || '').trim();
+      const route = routeOf(title); if (!route) return;
+      if (lines.length && lines[0].trim() === title) lines.shift();   // body often repeats the title
+      const body = lines.join('\n').replace(/\s+$/, '').replace(/^\n+/, '');
+      out.push({route, title, body});
+    });
+    return out;
+  }
+  function saveNotes(txt){
+    const list = parseNotes(txt || '');
+    if (!list.length){
+      $('nMeta').innerHTML = '<span class="bad">No flight notes found in what was pasted.</span> Run 1 · Sync first, and check the shortcut adds &lt;&lt;&lt;NOTE&gt;&gt;&gt; before each note.';
+      return false;
+    }
+    notes = {list, at: Date.now()}; store.set('notes', notes); nRender(); nMeta(`<span class="ok">Synced ${list.length} note${list.length===1?'':'s'}.</span>`);
+    return true;
+  }
+  const esc = t => t.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
+  function nMeta(prefix){
+    const when = notes.at ? new Date(notes.at).toLocaleString([], {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : null;
+    $('nMeta').innerHTML = (prefix ? prefix + ' ' : '') + (when ? `${notes.list.length} notes on this iPad · last synced ${when}` : 'No notes synced yet — see setup below.');
+  }
+  // DEP/DEST dropdowns: every airport in the app list plus any code that appears in a note title
+  function nCodes(){
+    const set = new Set(AIRPORTS.map(a => a[0]));
+    notes.list.forEach(n => n.route.split('-').forEach(c => set.add(c)));
+    return [...set].sort((a,b) => a === 'SIN' ? -1 : b === 'SIN' ? 1 : a.localeCompare(b));
+  }
+  function nFill(){
+    const codes = nCodes();
+    ['nDep','nDest'].forEach((id, i) => {
+      const key = i ? 'dest' : 'dep', el = $(id);
+      el.innerHTML = '<option value="">—</option>' + codes.map(c => `<option value="${c}">${c}${APT[c] ? ' · ' + APT[c].name : ''}</option>`).join('');
+      el.value = pa[key] || '';
+    });
+  }
+  function nSet(dep, dest){
+    pa.dep = dep; pa.dest = dest; paSave();
+    paints.forEach(f => f()); paRender(); nFill(); nRender();
+  }
+  $('nDep').addEventListener('change', () => nSet($('nDep').value, pa.dest));
+  $('nDest').addEventListener('change', () => nSet(pa.dep, $('nDest').value));
+  $('nSwap').onclick = () => nSet(pa.dest, pa.dep);
+  function nRender(){
+    const box = $('nBody'), route = pa.dep && pa.dest ? pa.dep + '-' + pa.dest : null;
+    const hits = route ? notes.list.filter(n => n.route === route) : [];
+    const routes = [...new Set(notes.list.map(n => n.route))].sort();
+    const chips = routes.length ? `<div class="nroutes">${routes.map(r => `<button data-r="${r}" class="${route && r === route.split('-').reverse().join('-') ? 'rev' : ''}">${r.replace('-', '→')}</button>`).join('')}</div>` : '';
+    if (hits.length){
+      box.innerHTML = hits.map(n => `<div class="ntitle">${esc(n.title)}</div><div class="ntext">${esc(n.body) || '<span class="nempty">(empty note)</span>'}</div>`).join('<hr class="nsep">');
+    } else {
+      const rev = route ? notes.list.some(n => n.route === route.split('-').reverse().join('-')) : false;
+      box.innerHTML = `<div class="nempty">${!notes.list.length ? 'No notes synced yet.' : !route ? 'Pick DEP and DEST, or tap a route:' :
+        `No note for ${route.replace('-', '→')}.` + (rev ? ' There is one for the reverse direction (outlined below).' : ' Synced routes:')}</div>` + chips;
+    }
+    box.querySelectorAll('.nroutes button').forEach(b => b.onclick = () => { const [d, a] = b.dataset.r.split('-'); nSet(d, a); });
+  }
+  $('nPaste').onclick = async () => {
+    try{
+      const txt = await navigator.clipboard.readText();
+      if (!saveNotes(txt)) return;
+      $('nManual').style.display = 'none';
+    }catch(e){
+      $('nManual').style.display = ''; $('nTa').value = ''; $('nTa').focus();
+    }
+  };
+  $('nTaSave').onclick = () => { if (saveNotes($('nTa').value)) { $('nManual').style.display = 'none'; $('nTa').value = ''; } };
+  $('nTaCancel').onclick = () => { $('nManual').style.display = 'none'; $('nTa').value = ''; };
+  if (!notes.list.length) $('nHelp').open = true;
+  nFill(); nRender(); nMeta();
+  // keep in step with the PA tab's Departure / Destination
+  ['paDep','paDest'].forEach(id => $(id).addEventListener('change', () => { nFill(); nRender(); }));
 
   /* ---------- Countdown to a clock time ---------- */
   const ct = store.get('ct', {target:null, time:''});
@@ -1086,7 +1232,7 @@
   function fit(){
     const w = innerWidth, h = innerHeight;
     document.body.classList.toggle('compact', h < 720 || w < 900);
-    $('ver').textContent = 'v20 · ' + w + '×' + h;
+    $('ver').textContent = 'v21 · ' + w + '×' + h;
     // airport dropdowns show just the code when the tool column is narrow
     const col = (document.querySelector('section.view.active') || {}).clientWidth || document.querySelector('main').clientWidth;
     aptLabels(col < 600);
