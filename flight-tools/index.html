@@ -322,7 +322,7 @@
   .ofpf.route .hl{color:var(--amber);font-weight:600}
   .ofpf .v .hlv,.ofpf .v .hlv small{color:var(--amber)}
   .ocbtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;margin-left:8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;vertical-align:middle}
-  .ocv{margin-right:4px;font-size:14px}
+  .ocv{margin-right:4px;font-size:14px;display:inline-block;line-height:1.5}
   body.compact .ocv{font-size:13px}
   .ofpf .v .kl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-right:4px;vertical-align:1px}
   body.compact .ofpf .v .kl{font-size:10px}
@@ -747,7 +747,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.51';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.52';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1449,7 +1449,7 @@
     // OptiClimb figures read from an eWAS screenshot (per OFP)
     const oc = (ofp.oc || {})[e.id];
     const ocBtn = `<label class="ocbtn">${oc ? 'Replace' : '📷 Add screenshot'}<input type="file" accept="image/*" data-oc="${e.id}" hidden></label>`;
-    const ocV = (oc ? `<span class="ocv"><span class="kl">TGT SPD</span> ${hlB(ofpEsc(oc.tgt || '—'))}<span class="sep">·</span><span class="kl">SPD RESTR</span> ${hlB(ofpEsc(oc.restr || '—'))}</span>`
+    const ocV = (oc ? `<span class="ocv"><span class="kl">TGT SPD</span> ${hlB(ofpEsc(oc.tgt || '—'))}<br><span class="kl">SPD RESTR</span> ${hlB(ofpEsc(oc.restr || '—'))}</span>`
       + (oc.ofpv && plan && !String(oc.ofpv).replace(/^OFP/i, '').startsWith(String(planNo || '').replace(/\D.*$/, '')) ? `<span class="calc" style="color:var(--red)">Screenshot is for ${ofpEsc(oc.ofpv)} — check it matches this OFP</span>` : '')
       : '') + ocBtn + '<span class="calc" id="ocMsg"></span>';
     const toMin = t => +t.slice(0,2) * 60 + +t.slice(2,4);
