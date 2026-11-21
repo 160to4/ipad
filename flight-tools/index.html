@@ -224,7 +224,7 @@
   .lpre{flex:1;display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding-right:10px}
   .lpre input.lnk{border:0 !important;background:transparent !important;flex:1}
   .lsuf{color:var(--dim);font:14px ui-monospace,monospace}
-  #linkFor{flex:1;height:38px;font-size:14px;width:auto;padding:0 30px 0 10px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
+  #linkFor,#rapidFor{flex:1;height:38px;font-size:14px;width:auto;padding:0 30px 0 10px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
   .rapid{border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
   .rapidbtn{width:100%;min-height:64px;font-size:20px;font-family:ui-monospace,monospace}
   .rapidhit{background:#2a1f08;border:1px solid var(--amber);border-radius:10px;padding:10px;color:#ffd58a}
@@ -705,7 +705,8 @@
     </div>
     <div class="unit" id="linkMsg" style="min-height:18px;margin-top:4px"></div>
     <div class="rapid">
-      <div class="label" style="margin:6px 0">Rapid try · <span id="rapidApp">AXIS</span></div>
+      <div class="arow" style="margin:6px 0 8px"><div class="label" style="flex:0 0 auto;margin:0">Rapid try</div>
+        <select class="num sel dd" id="rapidFor" aria-label="App to find"><option value="AXIS">AXIS</option><option value="ELB">ELB</option><option value="Sign">PilotSign</option></select></div>
       <button class="btn go rapidbtn" id="rapidGo">Start</button>
       <div class="unit" id="rapidInfo" style="margin-top:6px"></div>
       <div id="rapidHit" style="display:none;margin-top:8px" class="rapidhit"></div>
@@ -743,7 +744,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v59';   // bump with sw.js VERSION on every release
+  const APP_V = 'v60';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1890,12 +1891,12 @@
   }
   let rapid = {app: '', list: [], i: 0, t: 0, url: ''};
   function rapidReset(){
-    rapid.app = $('linkFor').value || 'AXIS'; rapid.list = rapidGuesses(rapid.app); rapid.i = 0;
-    $('rapidApp').textContent = rapid.app; $('rapidHit').style.display = 'none';
+    rapid.app = $('rapidFor').value || 'AXIS'; rapid.list = rapidGuesses(rapid.app); rapid.i = 0;
+    $('rapidHit').style.display = 'none';
     $('rapidGo').textContent = rapid.list.length ? `Try ${rapid.list[0]}://` : 'No guesses left';
     $('rapidInfo').textContent = `${rapid.list.length} guesses · keep tapping; I'll notice if an app opens`;
   }
-  $('linkFor').addEventListener('change', rapidReset);
+  $('rapidFor').addEventListener('change', rapidReset);
   $('rapidGo').onclick = () => {
     if (rapid.i >= rapid.list.length) return;
     const g = rapid.list[rapid.i];
@@ -1914,11 +1915,18 @@
       $('rapidHit').style.display = '';
       $('rapidHit').innerHTML = `<b>${esc(g)}://</b> opened an app. Was it ${esc(rapid.app)}?
         <div class="btns"><button class="btn small go" id="rapidYes">Yes, use it</button><button class="btn small" id="rapidNo">No, keep going</button></div>`;
-      $('rapidYes').onclick = () => { $('linkOwn').value = g; $('linkFor').value = rapid.app; $('linkUse').click(); $('rapidHit').innerHTML = `✓ ${esc(rapid.app)} now opens <b>${esc(g)}://</b>`; };
+      $('rapidYes').onclick = () => {
+        // set the matching button (AXIS / ELB / Sign or PilotSign); add one if it isn't on the bar
+        const want = rapid.app === 'Sign' ? ['Sign', 'PilotSign'] : [rapid.app];
+        const idx = apps.findIndex(([l]) => want.some(w => w.toLowerCase() === l.toLowerCase()));
+        if (idx >= 0) apps[idx] = [apps[idx][0], g + '://']; else apps.push([rapid.app, g + '://']);
+        store.set('apps', apps); appBar(); appRows(apps); linkRender();
+        $('rapidHit').innerHTML = `✓ ${esc(rapid.app === 'Sign' ? 'PilotSign' : rapid.app)} now opens <b>${esc(g)}://</b>`;
+      };
       $('rapidNo').onclick = () => { $('rapidHit').style.display = 'none'; };
     }
   });
-  $('appFind').onclick = () => { $('appModal').classList.remove('show'); linkRender(); if ([...$('linkFor').options].some(o => o.value === 'AXIS')) $('linkFor').value = 'AXIS'; rapidReset(); $('linkModal').classList.add('show'); };
+  $('appFind').onclick = () => { $('appModal').classList.remove('show'); linkRender(); rapidReset(); $('linkModal').classList.add('show'); };
   $('linkDone').onclick = () => { $('linkModal').classList.remove('show'); };
 
   /* ---------- Update button ---------- */
