@@ -1,6 +1,6 @@
 // Flight Deck Tools — offline cache.
 // Bump VERSION whenever any file changes so devices pick up the update.
-const VERSION = 'fdt-v62';
+const VERSION = 'fdt-v63';
 const FILES = [
   './',
   './index.html',
@@ -10,7 +10,12 @@ const FILES = [
   './icon-512.png',
   './icon-maskable-512.png',
   './lib/pdf.min.js',
-  './lib/pdf.worker.min.js'
+  './lib/pdf.worker.min.js',
+  './lib/tess/tesseract.min.js',
+  './lib/tess/worker.min.js',
+  './lib/tess/tesseract-core-simd-lstm.wasm.js',
+  './lib/tess/tesseract-core-lstm.wasm.js',
+  './lib/tess/eng.traineddata.gz'
 ];
 
 self.addEventListener('install', e => {

@@ -321,6 +321,8 @@
   .ofpf .v .bn{font-size:.8em;margin-left:6px}
   .ofpf.route .hl{color:var(--amber);font-weight:600}
   .ofpf .v .hlv,.ofpf .v .hlv small{color:var(--amber)}
+  .ocbtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;margin-left:8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;vertical-align:middle}
+  .ocv{margin-right:4px}
   .ofpf .v .kl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-right:4px;vertical-align:1px}
   body.compact .ofpf .v .kl{font-size:10px}
   #ofpBrief.on{background:#3a2a0a;border-color:var(--amber);color:#ffd58a}
@@ -744,7 +746,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v62';   // bump with sw.js VERSION on every release
+  const APP_V = 'v63';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1443,6 +1445,12 @@
     const hlB = v => brief ? `<span class="hlv">${v}</span>` : v;   // BRIEF highlight
     $('ofpBrief').style.display = ''; $('ofpBrief').classList.toggle('on', brief);
     const planNo = plan ? String(plan).replace(/^(PLAN|OFP)\s*/i, '') : null;
+    // OptiClimb figures read from an eWAS screenshot (per OFP)
+    const oc = (ofp.oc || {})[e.id];
+    const ocBtn = `<label class="ocbtn">${oc ? 'Replace' : '📷 Add screenshot'}<input type="file" accept="image/*" data-oc="${e.id}" hidden></label>`;
+    const ocV = (oc ? `<span class="ocv"><span class="kl">TGT SPD</span> ${hlB(ofpEsc(oc.tgt || '—'))}<span class="sep">·</span><span class="kl">SPD RESTR</span> ${hlB(ofpEsc(oc.restr || '—'))}</span>`
+      + (oc.ofpv && plan && !String(oc.ofpv).replace(/^OFP/i, '').startsWith(String(planNo || '').replace(/\D.*$/, '')) ? `<span class="calc" style="color:var(--red)">Screenshot is for ${ofpEsc(oc.ofpv)} — check it matches this OFP</span>` : '')
+      : '') + ocBtn + '<span class="calc" id="ocMsg"></span>';
     const toMin = t => +t.slice(0,2) * 60 + +t.slice(2,4);
     const hm = m => Math.floor(m / 60) + ':' + pad2(m % 60);
     const blk = d.std && d.sta ? ((toMin(d.sta) - toMin(d.std)) + 1440) % 1440 : null;          // block time (annotator: BLK)
@@ -1498,6 +1506,7 @@
         ${ofpField('Excess fuel', xsCtl)}
         ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn add / less', ba)}
+        ${ofpField('OptiClimb', ocV)}
         ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
       </div>`;
     $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
@@ -1563,6 +1572,57 @@
   $('ofpRecent').addEventListener('change', () => { ofp.cur = $('ofpRecent').value; store.set('ofp', ofp); ofpRender();
     const e = ofp.recent.find(r => r.id === ofp.cur); if (e){ $('ofpMeta').textContent = e.name; ofpToRest(e.data); } });
   $('ofpBrief').onclick = () => { ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpRender(); };
+
+  /* ---------- OptiClimb: read TGT SPD / SPD RESTR from an eWAS screenshot (on-device text recognition) ---------- */
+  let ocrReady = null;
+  const abs = p => new URL(p, location.href).href;
+  function loadOcr(){
+    if (!ocrReady) ocrReady = new Promise((res, rej) => {
+      const sc = document.createElement('script'); sc.src = 'lib/tess/tesseract.min.js';
+      sc.onload = () => Tesseract.createWorker('eng', 1, {
+        workerPath: abs('lib/tess/worker.min.js'), corePath: abs('lib/tess/'), langPath: abs('lib/tess/'), gzip: true, cacheMethod: 'none'
+      }).then(res, rej);
+      sc.onerror = () => { ocrReady = null; rej(new Error('Could not load the text reader')); };
+      document.head.appendChild(sc);
+    });
+    return ocrReady;
+  }
+  // light text on a dark panel reads best inverted to dark-on-light, in greyscale, at ~2× size
+  async function ocPrep(file){
+    const img = await createImageBitmap(file);
+    const k = Math.min(2.5, Math.max(1, 2400 / img.width));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, c.width, c.height);
+    const px = g.getImageData(0, 0, c.width, c.height), a = px.data;
+    for (let i = 0; i < a.length; i += 4){
+      let y = 0.299*a[i] + 0.587*a[i+1] + 0.114*a[i+2];
+      y = 255 - y; y = y < 110 ? Math.max(0, y - 60) : Math.min(255, y + 60);   // invert + boost contrast
+      a[i] = a[i+1] = a[i+2] = y;
+    }
+    g.putImageData(px, 0, 0);
+    return c;
+  }
+  function ocParse(t){
+    const T = t.replace(/[|]/g, '/').replace(/\s+/g, ' ');
+    const fixM = m => m.replace(/\s/g, '').replace(/^M[O0o]?[.,]?/i, 'M0.');
+    const a = T.match(/TGT\s*SPD[^0-9]{0,40}?(\d{3})\s*\/\s*(M\s*[0Oo]?\s*[.,]\s*\d{2,3})/i);
+    const b = T.match(/SPD\s*RESTR[^0-9]{0,12}?(\d{3})\s*\/\s*F\s*L\s*(\d{2,3})/i);
+    const v = T.match(/OFP\s*version\s*number\s*:?\s*(OFP\s*[\w\/]+)/i);
+    return { tgt: a ? `${a[1]} / ${fixM(a[2])}` : null, restr: b ? `${b[1]} / FL${b[2]}` : null, ofpv: v ? v[1].replace(/\s/g, '') : null };
+  }
+  $('ofpOut').addEventListener('change', async ev => {
+    const inp = ev.target.closest('input[data-oc]'); if (!inp || !inp.files || !inp.files[0]) return;
+    const id = inp.dataset.oc, file = inp.files[0]; inp.value = '';
+    const msg = t => { const m = $('ocMsg'); if (m) m.textContent = t; };
+    msg('Reading screenshot… (the first time takes a few seconds)');
+    try{
+      const [w, canvas] = await Promise.all([loadOcr(), ocPrep(file)]);
+      const { data } = await w.recognize(canvas);
+      const r = ocParse(data.text);
+      if (!r.tgt && !r.restr){ msg('Couldn’t find TGT SPD / SPD RESTR in that picture — is the OptiFlight tab showing?'); return; }
+      ofp.oc = ofp.oc || {}; ofp.oc[id] = r; store.set('ofp', ofp); ofpRender();
+    }catch(err){ msg('Couldn’t read the picture: ' + (err.message || err)); }
+  });
   $('ofpRoute').onclick = () => {
     const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
     nSet(e.data.dep, e.data.arr);
