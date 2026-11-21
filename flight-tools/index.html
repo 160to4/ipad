@@ -303,7 +303,7 @@
   #view-ofp .num.sel.dd{width:auto;min-width:0;height:40px;font-size:15px;padding:0 30px 0 10px;
     background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
   .ofpgrid{display:flex;flex-direction:column;gap:5px}
-  .ofpf{display:grid;grid-template-columns:140px 1fr;align-items:baseline;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-width:0}
+  .ofpf{display:grid;grid-template-columns:126px 1fr;align-items:baseline;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-width:0}
   .ofpf .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600}
   .ofpf .v{font-size:16px;font-variant-numeric:tabular-nums;font-weight:500;overflow-wrap:anywhere}
   .ofpf .v small{font-size:12px;color:var(--dim);font-weight:400;margin-left:2px}
@@ -340,7 +340,7 @@
   body.compact #view-ofp .nsyncrow .btn.small{min-height:34px;font-size:13px}
   body.compact #view-ofp .nmeta{min-width:0;font-size:11px}
   body.compact .ofpgrid{gap:4px}
-  body.compact .ofpf{padding:4px 10px;grid-template-columns:112px 1fr;gap:8px}
+  body.compact .ofpf{padding:4px 10px;grid-template-columns:100px 1fr;gap:8px}
   body.compact .ofpf .k{font-size:10px}
   body.compact .ofphead .big{font-size:18px}
   body.compact .ofphead{margin-bottom:6px}
@@ -746,7 +746,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v64';   // bump with sw.js VERSION on every release
+  const APP_V = 'v6.50';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1502,10 +1502,10 @@
         ${ofpField('PZFW', d.pzfw == null ? null : (dz ? pzfwV : hlB(tn(d.pzfw))) + adjCtl, false, '', brief ? 1 : 0)}
         ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', d.burn == null ? null : tn(d.burn) + (ldg != null ? `<span class="br">(LDG ${ldg.toFixed(1)}T)</span>` : ''))}
-        ${ofpField('Reserves · ALTN', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
+        ${ofpField('Reserves', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
         ${ofpField('Excess fuel', xsCtl)}
         ${ofpField('Fuel in tanks', fitV)}
-        ${ofpField('Burn add / less', ba)}
+        ${ofpField('Burn +/-', ba)}
         ${ofpField('OptiClimb', ocV)}
         ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
       </div>`;
