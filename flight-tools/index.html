@@ -225,6 +225,10 @@
   .lpre input.lnk{border:0 !important;background:transparent !important;flex:1}
   .lsuf{color:var(--dim);font:14px ui-monospace,monospace}
   #linkFor{flex:1;height:38px;font-size:14px;width:auto;padding:0 30px 0 10px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
+  .rapid{border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
+  .rapidbtn{width:100%;min-height:64px;font-size:20px;font-family:ui-monospace,monospace}
+  .rapidhit{background:#2a1f08;border:1px solid var(--amber);border-radius:10px;padding:10px;color:#ffd58a}
+  .rapidhit .btns{margin-top:8px;justify-content:flex-start}
   .lrow{border-top:1px solid var(--line);padding:8px 0}
   .lrow .lname{font-weight:700;font-size:14px;margin-bottom:6px}
   .lrow .lname small{color:var(--dim);font-weight:400;margin-left:6px}
@@ -700,6 +704,12 @@
       <button id="linkUse" style="width:auto;padding:0 14px;background:#1f6f3a;color:#fff">Use</button>
     </div>
     <div class="unit" id="linkMsg" style="min-height:18px;margin-top:4px"></div>
+    <div class="rapid">
+      <div class="label" style="margin:6px 0">Rapid try · <span id="rapidApp">AXIS</span></div>
+      <button class="btn go rapidbtn" id="rapidGo">Start</button>
+      <div class="unit" id="rapidInfo" style="margin-top:6px"></div>
+      <div id="rapidHit" style="display:none;margin-top:8px" class="rapidhit"></div>
+    </div>
     <div class="unit" id="linkHist" style="margin-top:6px;line-height:1.6"></div>
     <div class="btns" style="justify-content:flex-end"><button class="btn small go" id="linkDone">Done</button></div>
   </div>
@@ -733,7 +743,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v58';   // bump with sw.js VERSION on every release
+  const APP_V = 'v59';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1865,7 +1875,50 @@
     apps = apps.map(([a, t]) => a === l ? [a, v + '://'] : [a, t]); store.set('apps', apps); appBar(); appRows(apps);
     $('linkMsg').textContent = `${l} now opens ${v}://`;
   };
-  $('appFind').onclick = () => { $('appModal').classList.remove('show'); linkRender(); $('linkModal').classList.add('show'); setTimeout(() => $('linkOwn').focus(), 50); };
+
+  /* ---------- Rapid try: one tap per guess, detects when another app opens ---------- */
+  function rapidGuesses(label){
+    const extra = {
+      'AXIS': ['axis', 'axisapp', 'axisefb', 'axiscrew', 'axispilot', 'axismobile', 'axisios', 'axisipad', 'myaxis', 'iaxis', 'eaxis',
+               'axis2', 'axisx', 'axisplus', 'axisgo', 'axisone', 'axisnext', 'axisportal', 'axishub', 'axissq', 'sqaxis', 'siaaxis', 'axissia', 'axisflight', 'axisops'],
+      'ELB':  ['elb', 'elbapp', 'elog', 'elogbook', 'etl', 'etechlog', 'techlog', 'eltb', 'elbsq', 'sqelb', 'siaelb', 'elbmobile', 'elbipad', 'myelb'],
+      'Sign': ['pilotsign', 'psign', 'sign', 'esign', 'pilotsignapp', 'signpilot', 'sqsign', 'siasign', 'pilotsignsq', 'pilotsignipad', 'mypilotsign']
+    }[label] || [label.toLowerCase().replace(/[^a-z0-9]/g, '')];
+    const forms = b => [b, `${b}.sq`, `${b}.sia`, `sq.${b}`, `sia.${b}`, `com.${b}`, `${b}.ios`, `${b}-ios`, `${b}app`, `com.singaporeair.${b}`, `com.sia.${b}`, `sg.com.singaporeair.${b}`, `sg.com.sia.${b}`];
+    const done = new Set(tried);
+    return [...new Set(extra.flatMap(forms))].filter(g => !done.has(g));
+  }
+  let rapid = {app: '', list: [], i: 0, t: 0, url: ''};
+  function rapidReset(){
+    rapid.app = $('linkFor').value || 'AXIS'; rapid.list = rapidGuesses(rapid.app); rapid.i = 0;
+    $('rapidApp').textContent = rapid.app; $('rapidHit').style.display = 'none';
+    $('rapidGo').textContent = rapid.list.length ? `Try ${rapid.list[0]}://` : 'No guesses left';
+    $('rapidInfo').textContent = `${rapid.list.length} guesses · keep tapping; I'll notice if an app opens`;
+  }
+  $('linkFor').addEventListener('change', rapidReset);
+  $('rapidGo').onclick = () => {
+    if (rapid.i >= rapid.list.length) return;
+    const g = rapid.list[rapid.i];
+    rapid.url = g; rapid.t = Date.now();
+    if (!tried.includes(g)){ tried.push(g); store.set('linkTried2', tried); }
+    openLink(g + '://');
+    rapid.i++;
+    $('rapidGo').textContent = rapid.i < rapid.list.length ? `Try ${rapid.list[rapid.i]}://` : 'All tried';
+    $('rapidInfo').textContent = `${rapid.i}/${rapid.list.length} tried · last: ${g}://`;
+  };
+  // If the page goes into the background within 2.5s of a try, that guess opened some app
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && rapid.url && Date.now() - rapid.t < 2500){ rapid.hit = rapid.url; }
+    if (document.visibilityState === 'visible' && rapid.hit){
+      const g = rapid.hit; rapid.hit = '';
+      $('rapidHit').style.display = '';
+      $('rapidHit').innerHTML = `<b>${esc(g)}://</b> opened an app. Was it ${esc(rapid.app)}?
+        <div class="btns"><button class="btn small go" id="rapidYes">Yes, use it</button><button class="btn small" id="rapidNo">No, keep going</button></div>`;
+      $('rapidYes').onclick = () => { $('linkOwn').value = g; $('linkFor').value = rapid.app; $('linkUse').click(); $('rapidHit').innerHTML = `✓ ${esc(rapid.app)} now opens <b>${esc(g)}://</b>`; };
+      $('rapidNo').onclick = () => { $('rapidHit').style.display = 'none'; };
+    }
+  });
+  $('appFind').onclick = () => { $('appModal').classList.remove('show'); linkRender(); if ([...$('linkFor').options].some(o => o.value === 'AXIS')) $('linkFor').value = 'AXIS'; rapidReset(); $('linkModal').classList.add('show'); };
   $('linkDone').onclick = () => { $('linkModal').classList.remove('show'); };
 
   /* ---------- Update button ---------- */
