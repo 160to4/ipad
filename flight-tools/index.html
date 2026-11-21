@@ -212,6 +212,11 @@
   .appbtns a:active{background:var(--panel2);border-color:var(--amber)}
   .appbtns a.on{color:var(--amber);border-color:var(--amber);background:#2a1f08}
   .appbtns .none{color:var(--dim);font-size:13px;align-self:center}
+  .appback{flex:0 0 auto;align-self:stretch;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:10px;background:#2a1f08;border:1px solid var(--amber);color:#ffd58a;text-decoration:none;font-weight:700;font-size:16px;white-space:nowrap}
+  .appback small{font-size:12px;font-weight:600}
+  .appback.off{opacity:.35;pointer-events:none;background:transparent;border-color:var(--line);color:var(--dim)}
+  body.compact .appback{min-height:34px;padding:0 9px;font-size:14px}
+  @container (max-width: 520px){ .appback{min-height:32px !important;padding:0 8px !important;align-self:flex-start} .appback small{display:none} }
   .appedit{flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;background:transparent;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:600}
   body.compact .appbar{padding:5px 10px calc(5px + env(safe-area-inset-bottom))}
   body.compact .appbtns a,body.compact .appedit{min-height:34px;font-size:13px;padding:0 10px}
@@ -687,6 +692,7 @@
 
 <!-- ============ APP LAUNCHER BAR (always visible) ============ -->
 <footer class="appbar" id="appbar">
+  <a class="appback" id="appBack" target="_top" aria-label="Back to previous app">⇄</a>
   <div class="appbtns" id="appBtns"></div>
   <button class="appedit" id="appEdit" aria-label="Edit app buttons">Edit</button>
 </footer>
@@ -744,7 +750,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v60';   // bump with sw.js VERSION on every release
+  const APP_V = 'v61';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1823,13 +1829,28 @@
     store.set('appsFound', JSON.stringify(APP_FOUND));
   }
   let apps = store.get('apps', APP_DEFAULTS);
-  let appOn = store.get('appOn', '');   // label of the last app opened from the bar (shown in yellow)
+  let appOn = store.get('appOn', '');     // label of the last app opened from the bar (shown in yellow)
+  let appPrev = store.get('appPrev', ''); // the one before it — the ⇄ button goes back to it
   const appHref = t => t.startsWith('shortcut:') ? 'shortcuts://run-shortcut?name=' + encodeURIComponent(t.slice(9).trim()) : t;
   const okLink = t => /^[a-z][a-z0-9+.\-]*:/i.test(t) && !/^javascript:/i.test(t);
+  // Remember the last two apps opened from the bar; ⇄ opens the previous one (like Alt-Tab)
+  function appSwitchTo(l){
+    if (l !== appOn){ appPrev = appOn; appOn = l; store.set('appOn', appOn); store.set('appPrev', appPrev); }
+    $('appBtns').querySelectorAll('a').forEach(x => x.classList.toggle('on', x.dataset.l === appOn));
+    appBackUI();
+  }
+  function appBackUI(){
+    const prev = apps.find(([l]) => l === appPrev), b = $('appBack');
+    b.classList.toggle('off', !prev);
+    b.innerHTML = prev ? `⇄ <small>${esc(prev[0])}</small>` : '⇄';
+    b.setAttribute('href', prev ? appHref(prev[1]) : '#');
+  }
+  $('appBack').addEventListener('click', e => { if (!apps.find(([l]) => l === appPrev)){ e.preventDefault(); return; } appSwitchTo(appPrev); });
   function appBar(){
     $('appBtns').innerHTML = apps.length ? apps.map(([l, t]) => `<a href="${esc(appHref(t))}" target="_top" data-l="${esc(l)}" class="${l === appOn ? 'on' : ''}">${esc(l)}</a>`).join('')
       : '<span class="none">No app buttons yet — tap Edit</span>';
-    $('appBtns').querySelectorAll('a').forEach(a => a.addEventListener('click', () => { appOn = a.dataset.l; store.set('appOn', appOn); $('appBtns').querySelectorAll('a').forEach(x => x.classList.toggle('on', x === a)); }));
+    $('appBtns').querySelectorAll('a').forEach(a => a.addEventListener('click', () => appSwitchTo(a.dataset.l)));
+    appBackUI();
     requestAnimationFrame(() => pads.forEach(p => p.resize()));
   }
   function appRows(list){
