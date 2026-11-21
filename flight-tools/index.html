@@ -329,13 +329,15 @@
   .paxsep{color:var(--dim);margin:0 3px;align-self:center;font-weight:400}
   .paxrow .paxsep{align-self:flex-end;margin-bottom:6px}
   .paxin,.crewin{height:30px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text);font-size:15px;outline:none}
-  .paxin{width:48px;text-align:center;font-variant-numeric:tabular-nums}
+  .paxin{width:40px;font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
   .paxin.chg{border-color:var(--amber)}
   .paxin:focus,.crewin:focus{border-color:var(--amber)}
-  .crewgrid{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;align-items:center;width:100%}
-  .crewgrid > span:nth-child(even){display:flex;align-items:center;min-width:0}
+  .ofpf.crewf{row-gap:5px;align-items:center}
+  .ofpf.crewf .crewk{padding-left:10px;font-size:10px}
+  .ofpf.crewf .crewv{display:flex;align-items:center;min-width:0}
+  .ofpf.crewf .paxsep{margin:0 4px}
   .crewin{width:100%;min-width:0;padding:0 8px;font-size:14px}
-  body.compact .paxin{width:42px;height:28px;font-size:14px}
+  body.compact .paxin{width:38px;height:28px;font-size:11px}
   body.compact .crewin{height:28px;font-size:13px}
   body.compact .ocv{font-size:13px}
   .ofpf .v .kl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-right:4px;vertical-align:1px}
@@ -761,7 +763,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.53';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.54';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1464,11 +1466,13 @@
     const paxV = `<span class="paxrow">${pax.map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span>`;
     const crew = ((ofp.crew || {})[e.id]) || {};
     const cin = (k, ph) => `<input class="crewin" data-crew="${k}" data-id="${e.id}" value="${ofpEsc(crew[k] || '')}" placeholder="${ph}" autocapitalize="words" autocomplete="off" spellcheck="false">`;
-    const crewV = `<span class="crewgrid">
-      <span class="kl">IFM</span><span>${cin('ifm', '')}</span>
-      <span class="kl">Chief</span><span>${cin('chief', '')}</span>
-      <span class="kl">LS</span><span>${cin('ls1', '')}<span class="paxsep">/</span>${cin('ls2', '')}</span>
-      <span class="kl">LSS</span><span>${cin('lss1', '')}<span class="paxsep">/</span>${cin('lss2', '')}</span></span>`;
+    // Crew: labels sit under "CREW" in the left column, so the boxes get the full right column
+    const crewRow = (lab, inner) => `<div class="k crewk">${lab}</div><div class="v crewv">${inner}</div>`;
+    const crewHtml = `<div class="ofpf crewf"><div class="k">Crew</div><div></div>
+      ${crewRow('IFM', cin('ifm', ''))}
+      ${crewRow('CS', cin('chief', ''))}
+      ${crewRow('LS', cin('ls1', '') + '<span class="paxsep">/</span>' + cin('ls2', ''))}
+      ${crewRow('LSS', cin('lss1', '') + '<span class="paxsep">/</span>' + cin('lss2', ''))}</div>`;
     const hlB = v => brief ? `<span class="hlv">${v}</span>` : v;   // BRIEF highlight
     $('ofpBrief').style.display = ''; $('ofpBrief').classList.toggle('on', brief);
     const planNo = plan ? String(plan).replace(/^(PLAN|OFP)\s*/i, '') : null;
@@ -1536,7 +1540,7 @@
         ${ofpField('OptiClimb', ocV)}
         ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
         ${ofpField('PAX', paxV)}
-        ${ofpField('Crew', crewV)}
+        ${crewHtml}
       </div>`;
     $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
     // stepper events
