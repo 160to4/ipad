@@ -746,7 +746,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v63';   // bump with sw.js VERSION on every release
+  const APP_V = 'v64';   // bump with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1602,13 +1602,37 @@
     g.putImageData(px, 0, 0);
     return c;
   }
+  // Two passes: find the "TGT SPD" line, cut out just the OptiClimb panel (up to where the dark panel ends),
+  // then read that box on its own so text from windows beside it can't mix into the lines.
+  async function ocRead(w, canvas){
+    const { data } = await w.recognize(canvas, {}, { text: true, blocks: true });
+    const words = (data.blocks || []).flatMap(b => b.paragraphs.flatMap(p => p.lines.flatMap(l => l.words.map(wd => ({...wd, line: l.bbox})))));
+    const tgt = words.find(wd => /^TGT$/i.test(wd.text.trim()));
+    if (!tgt) return ocParse(data.text);
+    const H = tgt.bbox.y1 - tgt.bbox.y0, cy = Math.round((tgt.bbox.y0 + tgt.bbox.y1) / 2);
+    const sameLine = words.filter(wd => Math.abs((wd.bbox.y0 + wd.bbox.y1) / 2 - cy) < H && wd.bbox.x1 <= tgt.bbox.x0);
+    const left = Math.max(0, Math.min(tgt.bbox.x0, ...sameLine.map(wd => wd.bbox.x0)) - 4 * H);
+    // panel edge: first long dark run (light map/window background, inverted) to the right of TGT
+    const g = canvas.getContext('2d'), row = g.getImageData(0, cy, canvas.width, 1).data;
+    let right = canvas.width, run = 0;
+    for (let x = tgt.bbox.x1 + 6 * H; x < canvas.width; x++){
+      if (row[x * 4] < 90){ if (++run > 3 * H){ right = x - run; break; } } else run = 0;
+    }
+    const top = Math.max(0, tgt.bbox.y0 - 6 * H), bottom = Math.min(canvas.height, tgt.bbox.y1 + 9 * H);
+    const c = document.createElement('canvas'); c.width = Math.max(10, right - left); c.height = bottom - top;
+    c.getContext('2d').drawImage(canvas, left, top, c.width, c.height, 0, 0, c.width, c.height);
+    const r2 = ocParse((await w.recognize(c)).data.text), r1 = ocParse(data.text);
+    return { tgt: r2.tgt || r1.tgt, restr: r2.restr || r1.restr, ofpv: r1.ofpv || r2.ofpv };
+  }
   function ocParse(t){
     const T = t.replace(/[|]/g, '/').replace(/\s+/g, ' ');
     const fixM = m => m.replace(/\s/g, '').replace(/^M[O0o]?[.,]?/i, 'M0.');
-    const a = T.match(/TGT\s*SPD[^0-9]{0,40}?(\d{3})\s*\/\s*(M\s*[0Oo]?\s*[.,]\s*\d{2,3})/i);
+    // second part is a Mach number (M0.82) or words such as "CRZ Mach" / "ECON"
+    const a = T.match(/TGT\s*SPD[^0-9]{0,40}?(\d{3})\s*\/\s*(M\s*[0Oo]?\s*[.,]\s*\d{2,3}|[A-Z]{2,5}(?:\s+[A-Za-z]{2,6})?)/i);
     const b = T.match(/SPD\s*RESTR[^0-9]{0,12}?(\d{3})\s*\/\s*F\s*L\s*(\d{2,3})/i);
     const v = T.match(/OFP\s*version\s*number\s*:?\s*(OFP\s*[\w\/]+)/i);
-    return { tgt: a ? `${a[1]} / ${fixM(a[2])}` : null, restr: b ? `${b[1]} / FL${b[2]}` : null, ofpv: v ? v[1].replace(/\s/g, '') : null };
+    const second = a ? (/^M\s*[0Oo]?\s*[.,]/i.test(a[2]) ? fixM(a[2]) : a[2].replace(/\s+(Enter|Switch|In|Speeds)$/i, '').replace(/\bmach\b/i, 'Mach')) : '';
+    return { tgt: a ? `${a[1]} / ${second}` : null, restr: b ? `${b[1]} / FL${b[2]}` : null, ofpv: v ? v[1].replace(/\s/g, '') : null };
   }
   $('ofpOut').addEventListener('change', async ev => {
     const inp = ev.target.closest('input[data-oc]'); if (!inp || !inp.files || !inp.files[0]) return;
@@ -1617,8 +1641,7 @@
     msg('Reading screenshot… (the first time takes a few seconds)');
     try{
       const [w, canvas] = await Promise.all([loadOcr(), ocPrep(file)]);
-      const { data } = await w.recognize(canvas);
-      const r = ocParse(data.text);
+      const r = await ocRead(w, canvas);
       if (!r.tgt && !r.restr){ msg('Couldn’t find TGT SPD / SPD RESTR in that picture — is the OptiFlight tab showing?'); return; }
       ofp.oc = ofp.oc || {}; ofp.oc[id] = r; store.set('ofp', ofp); ofpRender();
     }catch(err){ msg('Couldn’t read the picture: ' + (err.message || err)); }
