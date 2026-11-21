@@ -324,6 +324,9 @@
   .ocbtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;margin-left:8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;vertical-align:middle}
   .ocv{margin-right:4px;font-size:14px;display:inline-block;line-height:1.5}
   .paxrow{display:inline-flex;align-items:flex-end;gap:2px;flex-wrap:wrap}
+  .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
+  .kidrow .kl{margin-right:6px!important}
+  .kidrow .kl:not(:first-child){margin-left:4px}
   .paxcell{display:inline-flex;flex-direction:column;align-items:center}
   .paxd{font-size:11px;font-weight:700;color:var(--amber);min-height:14px;line-height:14px}
   .paxsep{color:var(--dim);margin:0 3px;align-self:center;font-weight:400}
@@ -763,7 +766,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.54';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.55';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1462,8 +1465,9 @@
     // PAX (4 cabins, editable, shows change from the default) and cabin crew names — saved per OFP
     const PAX_DEF = [4, 48, 28, 184];
     const pax = ((ofp.pax || {})[e.id]) || PAX_DEF.slice();
+    const kid = i => { const v = pax[i] ?? '0'; return `<input class="paxin${+v ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="${i === 4 ? 'Child' : 'Infant'}">`; };
     const dlt = (v, i) => { const n = parseInt(v, 10); if (isNaN(n) || n === PAX_DEF[i]) return ''; const d = n - PAX_DEF[i]; return (d > 0 ? '+' : '−') + Math.abs(d); };
-    const paxV = `<span class="paxrow">${pax.map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span>`;
+    const paxV = `<span class="paxrow">${pax.slice(0, 4).map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span><span class="kidrow"><span class="kl">Child</span>${kid(4)}<span class="paxsep">/</span><span class="kl">Inf.</span>${kid(5)}</span>`;
     const crew = ((ofp.crew || {})[e.id]) || {};
     const cin = (k, ph) => `<input class="crewin" data-crew="${k}" data-id="${e.id}" value="${ofpEsc(crew[k] || '')}" placeholder="${ph}" autocapitalize="words" autocomplete="off" spellcheck="false">`;
     // Crew: labels sit under "CREW" in the left column, so the boxes get the full right column
@@ -1671,10 +1675,10 @@
     const t = ev.target;
     if (t.matches('.paxin')){
       t.value = t.value.replace(/\D/g, '').slice(0, 3);
-      const id = t.dataset.id, i = +t.dataset.pax, DEF = [4, 48, 28, 184];
-      ofp.pax = ofp.pax || {}; const p = ofp.pax[id] || DEF.slice(); p[i] = t.value; ofp.pax[id] = p; store.set('ofp', ofp);
+      const id = t.dataset.id, i = +t.dataset.pax, DEF = [4, 48, 28, 184, 0, 0];
+      ofp.pax = ofp.pax || {}; const p = ofp.pax[id] || DEF.slice(); while (p.length < 6) p.push(0); p[i] = t.value; ofp.pax[id] = p; store.set('ofp', ofp);
       const n = parseInt(t.value, 10), d = isNaN(n) ? 0 : n - DEF[i];
-      const lab = t.parentElement.querySelector('.paxd'); lab.textContent = d ? (d > 0 ? '+' : '−') + Math.abs(d) : '';
+      const lab = t.parentElement.querySelector('.paxd'); if (lab) lab.textContent = d ? (d > 0 ? '+' : '−') + Math.abs(d) : '';
       t.classList.toggle('chg', !!d);
     } else if (t.matches('.crewin')){
       const id = t.dataset.id; ofp.crew = ofp.crew || {}; ofp.crew[id] = Object.assign({}, ofp.crew[id], {[t.dataset.crew]: t.value}); store.set('ofp', ofp);
