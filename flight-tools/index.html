@@ -322,7 +322,8 @@
   .ofpf.route .hl{color:var(--amber);font-weight:600}
   .ofpf .v .hlv,.ofpf .v .hlv small{color:var(--amber)}
   .ocbtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;margin-left:8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;vertical-align:middle}
-  .ocv{margin-right:4px}
+  .ocv{margin-right:4px;font-size:14px}
+  body.compact .ocv{font-size:13px}
   .ofpf .v .kl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-right:4px;vertical-align:1px}
   body.compact .ofpf .v .kl{font-size:10px}
   #ofpBrief.on{background:#3a2a0a;border-color:var(--amber);color:#ffd58a}
@@ -746,7 +747,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.50';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.51';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
