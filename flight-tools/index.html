@@ -448,8 +448,7 @@
 <header>
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-view="ofp">OFP</button>
-    <button class="tab" role="tab" data-view="stopwatch">Timer <i class="dot" id="dotSw"></i></button>
-    <button class="tab" role="tab" data-view="countdown">CD <i class="dot" id="dotCd"></i></button>
+    <button class="tab" role="tab" data-view="stopwatch">Timer <i class="dot" id="dotSw"></i><i class="dot" id="dotCd"></i></button>
     <button class="tab" role="tab" data-view="calc">Calc</button>
     <button class="tab" role="tab" data-view="crew-rest">Rest</button>
     <button class="tab" role="tab" data-view="pa">PA</button>
@@ -459,8 +458,18 @@
 </header>
 
 <main>
-  <!-- ============ TIMER (count up) ============ -->
+  <!-- ============ TIMER: countdown to time · count up · countdown ============ -->
   <section class="view" id="view-stopwatch">
+    <div class="card">
+      <div class="label">Countdown to time · UTC (Z)</div>
+      <div class="clock mid paused" id="ctClock">0:00:00</div>
+      <div class="sub" id="ctSub">Pick a target time</div>
+      <div class="btns" style="align-items:center">
+        <input class="num t24" id="ctTime" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" aria-label="Target time (24h)">
+        <button class="btn go" id="ctStart">Start</button>
+        <button class="btn" id="ctCancel">Cancel</button>
+      </div>
+    </div>
     <div class="card">
       <div class="label">Timer · counts up</div>
       <div class="clock paused" id="swClock">0:00:00<small>.0</small></div>
@@ -475,20 +484,6 @@
         <input class="num" id="swM" inputmode="numeric" pattern="[0-9]*" value="0"><span class="u">m</span>
         <input class="num" id="swS" inputmode="numeric" pattern="[0-9]*" value="0"><span class="u">s</span>
         <button class="btn small" id="swSet">Set</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ COUNTDOWN ============ -->
-  <section class="view" id="view-countdown">
-    <div class="card">
-      <div class="label">Countdown to time · UTC (Z)</div>
-      <div class="clock mid paused" id="ctClock">0:00:00</div>
-      <div class="sub" id="ctSub">Pick a target time</div>
-      <div class="btns" style="align-items:center">
-        <input class="num t24" id="ctTime" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" aria-label="Target time (24h)">
-        <button class="btn go" id="ctStart">Start</button>
-        <button class="btn" id="ctCancel">Cancel</button>
       </div>
     </div>
     <div class="card">
@@ -768,7 +763,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.60';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.61';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -810,8 +805,9 @@
   }
 
   /* ---------- Tabs (hash routing) ---------- */
-  const views = ['ofp','stopwatch','countdown','calc','crew-rest','pa','notes'];
+  const views = ['ofp','stopwatch','calc','crew-rest','pa','notes'];
   function show(name){
+    if (name === 'countdown') name = 'stopwatch';   // CD tab was merged into Timer
     if (!views.includes(name)) name = store.get('tab','stopwatch');
     if (!views.includes(name)) name = 'stopwatch';
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view===name));
