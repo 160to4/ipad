@@ -768,7 +768,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.58';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.59';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1506,16 +1506,22 @@
     // Extra fuel loaded on top of the plan (per OFP), in 0.5T steps
     const xs = (ofp.xs && ofp.xs[e.id]) || 0;
     const xsCtl = `<span class="adj" style="margin-left:0"><button data-xs="-1" aria-label="Excess fuel minus 0.5">−</button><input id="ofpXs" inputmode="decimal" value="${xs ? (xs > 0 ? '+' : '') + xs.toFixed(1) : '0.0'}" class="${xs ? 'on' : ''}" aria-label="Excess fuel in tonnes"><button data-xs="1" aria-label="Excess fuel plus 0.5">+</button></span>`;
-    // Landing: ZFW (with the PZFW edit) and landing fuel (OFP LDG FUEL by default, −/+ 0.1, saved per OFP)
-    const zfwNow = pzKg != null ? (dz ? up1(pzKg + dz * 1000) : d.pzfw) : null;
-    const ldgSet = ofp.ldg && ofp.ldg[e.id] != null ? ofp.ldg[e.id] : null;
-    const ldgNow = ldgSet != null ? ldgSet : ldg;
-    const ldgCtl = `<span class="adj" style="margin-left:0"><button data-ldg="-1" aria-label="Landing fuel minus 0.1">−</button><input id="ofpLdg" inputmode="decimal" value="${ldgNow != null ? ldgNow.toFixed(1) : ''}" class="${ldgSet != null && ldgSet !== ldg ? 'on' : ''}" aria-label="Landing fuel in tonnes"><button data-ldg="1" aria-label="Landing fuel plus 0.1">+</button></span>`;
-    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span></span>`;
     const rate = dz > 0 ? rates.add : rates.less;
     const noRate = dz && rate == null;
     const burnKg = dz && !noRate ? (dz > 0 ? dz * rate : -Math.abs(dz) * rate) : 0;
     const sgn = v => v >= 0 ? '+' : '−';
+    // Landing: ZFW (with the PZFW edit) and landing fuel that follows the edits:
+    //  PZFW change → its extra burn is loaded and burnt, so landing fuel is unchanged;
+    //  excess fuel → lands with it, less the cost of carrying it (burn add per 1000KG).
+    //  Manual −/+ is kept as an offset on top, saved per OFP.
+    const zfwNow = pzKg != null ? (dz ? up1(pzKg + dz * 1000) : d.pzfw) : null;
+    const xsCarry = xs > 0 && rates.add != null ? xs * rates.add : (xs < 0 && rates.less != null ? xs * rates.less : 0);
+    const ldgAuto = ldg != null ? Math.round((ldg + xs - xsCarry / 1000) * 10) / 10 : null;
+    const ldgOff = (ofp.ldgD && ofp.ldgD[e.id]) || 0;
+    const ldgNow = ldgAuto != null ? Math.round((ldgAuto + ldgOff) * 10) / 10 : null;
+    const ldgCtl = `<span class="adj" style="margin-left:0"><button data-ldg="-1" aria-label="Landing fuel minus 0.1">−</button><input id="ofpLdg" inputmode="decimal" value="${ldgNow != null ? ldgNow.toFixed(1) : ''}" class="${ldgOff ? 'on' : ''}" aria-label="Landing fuel in tonnes"><button data-ldg="1" aria-label="Landing fuel plus 0.1">+</button></span>`;
+    const ldgWhy = ldgAuto != null && ldgAuto !== ldg ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(xs)} ${Math.abs(xs).toFixed(1)} excess${xsCarry ? ` ${sgn(-xsCarry)} ${(Math.abs(xsCarry) / 1000).toFixed(3)} carry` : ''}${ldgOff ? ` ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual` : ''}</span>` : (ldgOff ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual</span>` : '');
+    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span></span>${ldgWhy}`;
     if (dz || xs){
       const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
       if (fitKg != null){
@@ -1563,7 +1569,7 @@
     box.querySelectorAll('[data-adj]').forEach(b => b.onclick = () => { const k = +b.dataset.adj; setAdj(k === 0 ? 0 : dz + k * 0.1); });
     const setXs = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.xs = ofp.xs || {}; if (v) ofp.xs[e.id] = v; else delete ofp.xs[e.id]; store.set('ofp', ofp); ofpRender(); };
     box.querySelectorAll('[data-xs]').forEach(b => b.onclick = () => setXs(xs + (+b.dataset.xs) * 0.5));
-    const setLdg = v => { v = Math.round(v * 10) / 10; if (v < 0 || v > 999) return; ofp.ldg = ofp.ldg || {}; if (ldg != null && v === ldg) delete ofp.ldg[e.id]; else ofp.ldg[e.id] = v; store.set('ofp', ofp); ofpRender(); };
+    const setLdg = v => { if (ldgAuto == null) return; v = Math.round(v * 10) / 10; if (v < 0 || v > 999) return; const off = Math.round((v - ldgAuto) * 10) / 10; ofp.ldgD = ofp.ldgD || {}; if (off) ofp.ldgD[e.id] = off; else delete ofp.ldgD[e.id]; store.set('ofp', ofp); ofpRender(); };
     box.querySelectorAll('[data-ldg]').forEach(b => b.onclick = () => { if (ldgNow != null) setLdg(ldgNow + (+b.dataset.ldg) * 0.1); });
     [['ofpAdj', setAdj], ['ofpXs', setXs], ['ofpLdg', v => setLdg(Math.abs(v))]].forEach(([id, set]) => {
       const inp = $(id); if (!inp) return;
