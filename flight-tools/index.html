@@ -768,7 +768,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.59';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.60';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1520,8 +1520,9 @@
     const ldgOff = (ofp.ldgD && ofp.ldgD[e.id]) || 0;
     const ldgNow = ldgAuto != null ? Math.round((ldgAuto + ldgOff) * 10) / 10 : null;
     const ldgCtl = `<span class="adj" style="margin-left:0"><button data-ldg="-1" aria-label="Landing fuel minus 0.1">−</button><input id="ofpLdg" inputmode="decimal" value="${ldgNow != null ? ldgNow.toFixed(1) : ''}" class="${ldgOff ? 'on' : ''}" aria-label="Landing fuel in tonnes"><button data-ldg="1" aria-label="Landing fuel plus 0.1">+</button></span>`;
+    const ldw = zfwNow != null && ldgNow != null ? Math.round((zfwNow + ldgNow) * 10) / 10 : null;
     const ldgWhy = ldgAuto != null && ldgAuto !== ldg ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(xs)} ${Math.abs(xs).toFixed(1)} excess${xsCarry ? ` ${sgn(-xsCarry)} ${(Math.abs(xsCarry) / 1000).toFixed(3)} carry` : ''}${ldgOff ? ` ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual` : ''}</span>` : (ldgOff ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual</span>` : '');
-    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span></span>${ldgWhy}`;
+    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? hlB(tn(ldw)) : '—'}</span></span>${ldgWhy}`;
     if (dz || xs){
       const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
       if (fitKg != null){
