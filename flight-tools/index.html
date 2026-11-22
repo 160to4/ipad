@@ -766,7 +766,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.56';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.57';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -2107,12 +2107,17 @@
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!hadController || refreshing) return; refreshing = true; location.reload();
       });
-      navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(reg => {
-        const check = () => reg.update().catch(()=>{});
+      // In airplane mode any network attempt makes iOS pop "Turn off Airplane Mode or use Wi-Fi",
+      // so when offline: don't register/check at all (the installed copy keeps working).
+      const online = () => navigator.onLine !== false;
+      const start = () => navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(reg => {
+        const check = () => { if (online()) reg.update().catch(()=>{}); };
         check();
         // Home Screen apps usually resume instead of reloading, so check on every return.
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
       }).catch(()=>{});
+      if (online() || !hadController) start();
+      else window.addEventListener('online', start, {once: true});
     }
   }catch(e){}
 })();

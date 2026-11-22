@@ -1,6 +1,6 @@
 // Flight Deck Tools — offline cache.
 // Bump VERSION whenever any file changes so devices pick up the update.
-const VERSION = 'fdt-v6.56';
+const VERSION = 'fdt-v6.57';
 const FILES = [
   './',
   './index.html',
@@ -30,12 +30,18 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Pages: network first (so updates arrive when online), cache when offline.
+// Pages: network first when online (so updates arrive), cache only when offline.
 // Everything else: cache first.
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   if (req.mode === 'navigate') {
+    // Offline (airplane mode): open straight from the cache without touching the network,
+    // otherwise iOS shows "Turn off Airplane Mode or use Wi-Fi to access data".
+    if (self.navigator && self.navigator.onLine === false) {
+      e.respondWith(caches.match('./index.html').then(hit => hit || fetch(req)));
+      return;
+    }
     e.respondWith(
       fetch(new Request(req.url, {cache: 'no-store'}))
         .then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); return res; })
