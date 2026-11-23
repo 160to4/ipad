@@ -325,6 +325,10 @@
   .ocv{margin-right:4px;font-size:14px;display:inline-block;line-height:1.5}
   .paxrow{display:inline-flex;align-items:flex-end;gap:2px;flex-wrap:wrap}
   .ofpf .v .brline{display:block;margin-left:0;white-space:nowrap}
+  .vref{display:flex;align-items:baseline;gap:3px;margin-top:6px;white-space:nowrap}
+  .vref b{font-size:1.25em;font-weight:600}
+  .vref .dimtxt{color:var(--dim);font-weight:400}
+  .vref .vbuf{margin-left:10px;color:var(--dim);font-weight:400;font-size:.85em}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
@@ -764,7 +768,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.63';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.64';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1537,7 +1541,20 @@
       if (ldgChg) why.push(`LDG ${[xs ? `${sgn(xs)}${Math.abs(xs).toFixed(1)} excess` : '', ldgOff ? `${sgn(ldgOff)}${Math.abs(ldgOff).toFixed(1)} manual` : ''].filter(Boolean).join(' ')}`);
       if (why.length) burnV += why.map(w => `<span class="calc">${w}</span>`).join('');
     }
-    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? hlB(tn(ldw)) : '—'}</span></span>${ldgWhy}`;
+    // Vref30 table (weight bands in T) → Vref+5 and how much weight can come off before it drops 1kt
+    const VREF30 = [[149,248.3],[148,244.9],[147,241.5],[146,238.2],[145,234.9],[144,231.6],[143,228.4],[142,225.1],[141,221.9],[140,218.7],[139,215.6],[138,212.5],[137,209.4],[136,206.3],[135,203.3]];
+    let vrefV = '';
+    if (ldw != null){
+      const band = VREF30.find(([, lo]) => ldw >= lo);
+      if (ldw > 251.2) vrefV = `<span class="vref"><span class="kl">Vref+5</span><span class="dimtxt">above table (max 251.2T)</span></span>`;
+      else if (!band) vrefV = `<span class="vref"><span class="kl">Vref+5</span><span class="dimtxt">below table (min 203.3T)</span></span>`;
+      else {
+        const v5 = band[0] + 5, buf = Math.round((ldw - band[1]) * 10) / 10;
+        const col = v5 >= 150 ? 'var(--red)' : v5 <= 139 ? 'var(--amber)' : 'var(--green)';
+        vrefV = `<span class="vref"><span class="kl">Vref+5</span><b style="color:${col}">${v5}</b><small class="dimtxt">kt</small><span class="vbuf">${buf.toFixed(1)}T to ${v5 - 1}kt</span></span>`;
+      }
+    }
+    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? hlB(tn(ldw)) : '—'}</span></span>${vrefV}${ldgWhy}`;
     if (dz || xs){
       const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
       if (fitKg != null){
