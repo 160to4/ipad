@@ -15,7 +15,7 @@
 <style>
   :root{
     --bg:#0d1117; --panel:#161b22; --panel2:#1c232c; --line:#2a333e;
-    --text:#e6edf3; --dim:#8b97a5; --amber:#f5a524; --green:#3fb950;
+    --text:#e6edf3; --dim:#8b97a5; --amber:#f5a524; --green:#3fb950; --mag:#ff5ce1;
     --red:#f85149; --blue:#58a6ff; --violet:#bc8cff;
     --r:14px;
   }
@@ -316,11 +316,12 @@
   .adj input.on{border-color:var(--amber);color:var(--amber)}
   .adj .rst{width:auto;padding:0 8px;font-size:12px;color:var(--dim)}
   .ofpf .v .new{color:var(--amber)}
-  .bn{color:var(--amber);font-weight:700}
+  .bn{color:var(--mag);font-weight:700}
   .ofpf .k .bn{margin-right:4px;font-size:11px}
   .ofpf .v .bn{font-size:.8em;margin-left:6px}
-  .ofpf.route .hl{color:var(--amber);font-weight:600}
-  .ofpf .v .hlv,.ofpf .v .hlv small{color:var(--amber)}
+  .ofpf.route .hl{color:var(--mag);font-weight:600}
+  .ofpf .v .hlv,.ofpf .v .hlv small{color:var(--mag)}
+  .ofpf.ocdrop.dragon{border-color:var(--mag);background:#2a0f27;outline:2px dashed var(--mag);outline-offset:-4px}
   .ocbtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;margin-left:8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;vertical-align:middle}
   .ocv{margin-right:4px;font-size:14px;display:inline-block;line-height:1.5}
   .paxrow{display:inline-flex;align-items:flex-end;gap:2px;flex-wrap:wrap}
@@ -357,7 +358,7 @@
   body.compact .ocv{font-size:13px}
   .ofpf .v .kl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-right:4px;vertical-align:1px}
   body.compact .ofpf .v .kl{font-size:10px}
-  #ofpBrief.on{background:#3a2a0a;border-color:var(--amber);color:#ffd58a}
+  #ofpBrief.on{background:#3a0f33;border-color:var(--mag);color:#ffb3f1}
   .ofpf .v .br{color:var(--dim);font-weight:400;font-size:.88em;margin-left:6px}
   .ofpf.route .v{font-size:12px;font-weight:400;line-height:1.45;letter-spacing:.01em;word-spacing:2px}
   .ofpf .v .arrow{color:var(--dim);margin:0 6px}
@@ -773,7 +774,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.66';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.67';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1501,7 +1502,7 @@
     const ocBtn = `<label class="ocbtn">${oc ? 'Replace' : '📷 Add screenshot'}<input type="file" accept="image/*" data-oc="${e.id}" hidden></label>`;
     const ocV = (oc ? `<span class="ocv"><span class="kl">TGT SPD</span> ${hlB(ofpEsc(oc.tgt || '—'))}<br><span class="kl">SPD RESTR</span> ${hlB(ofpEsc(oc.restr || '—'))}</span>`
       + (oc.ofpv && plan && !String(oc.ofpv).replace(/^OFP/i, '').startsWith(String(planNo || '').replace(/\D.*$/, '')) ? `<span class="calc" style="color:var(--red)">Screenshot is for ${ofpEsc(oc.ofpv)} — check it matches this OFP</span>` : '')
-      : '') + ocBtn + '<span class="calc" id="ocMsg"></span>';
+      : '') + ocBtn + '<span class="calc" id="ocMsg">or drag a screenshot here</span>';
     const toMin = t => +t.slice(0,2) * 60 + +t.slice(2,4);
     const hm = m => Math.floor(m / 60) + ':' + pad2(m % 60);
     const blk = d.std && d.sta ? ((toMin(d.sta) - toMin(d.std)) + 1440) % 1440 : null;          // block time (annotator: BLK)
@@ -1596,7 +1597,7 @@
         ${ofpField('Excess fuel', xsCtl)}
         ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn +/-', ba)}
-        ${ofpField('OptiClimb', ocV)}
+        ${ofpField('OptiClimb', ocV, false, 'ocdrop')}
         ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
         <div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}</div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>
         ${ofpField('PAX', paxV)}
@@ -1781,9 +1782,7 @@
     if (t.value === '' && t.dataset.prev != null){ t.value = t.dataset.prev; t.dispatchEvent(new Event('input', {bubbles: true})); }
     t.placeholder = '';
   });
-  $('ofpOut').addEventListener('change', async ev => {
-    const inp = ev.target.closest('input[data-oc]'); if (!inp || !inp.files || !inp.files[0]) return;
-    const id = inp.dataset.oc, file = inp.files[0]; inp.value = '';
+  async function ocFromFile(id, file){
     const msg = t => { const m = $('ocMsg'); if (m) m.textContent = t; };
     msg('Reading screenshot… (the first time takes a few seconds)');
     try{
@@ -1792,6 +1791,27 @@
       if (!r.tgt && !r.restr){ msg('Couldn’t find TGT SPD / SPD RESTR in that picture — is the OptiFlight tab showing?'); return; }
       ofp.oc = ofp.oc || {}; ofp.oc[id] = r; store.set('ofp', ofp); ofpRender();
     }catch(err){ msg('Couldn’t read the picture: ' + (err.message || err)); }
+  }
+  $('ofpOut').addEventListener('change', ev => {
+    const inp = ev.target.closest('input[data-oc]'); if (!inp || !inp.files || !inp.files[0]) return;
+    const id = inp.dataset.oc, file = inp.files[0]; inp.value = '';
+    ocFromFile(id, file);
+  });
+  // Drag a screenshot (e.g. the thumbnail iPad shows after taking one) anywhere onto the OFP tab → OptiClimb
+  const dragImg = ev => [...((ev.dataTransfer && ev.dataTransfer.items) || [])].some(i => i.kind === 'file' && (!i.type || i.type.startsWith('image/')));
+  const ocField = () => document.querySelector('#ofpOut .ocdrop');
+  ['dragenter', 'dragover'].forEach(t => $('ofpOut').addEventListener(t, ev => {
+    if (!ocField() || !dragImg(ev)) return;
+    ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; ocField().classList.add('dragon');
+  }));
+  $('ofpOut').addEventListener('dragleave', ev => { if (!ev.relatedTarget || !$('ofpOut').contains(ev.relatedTarget)){ const f = ocField(); if (f) f.classList.remove('dragon'); } });
+  $('ofpOut').addEventListener('drop', ev => {
+    const f = ocField(); if (!f) return;
+    ev.preventDefault(); f.classList.remove('dragon');
+    const dt = ev.dataTransfer, file = [...(dt.files || [])].find(x => !x.type || x.type.startsWith('image/'))
+      || [...(dt.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).find(Boolean);
+    const e = ofp.recent.find(r => r.id === ofp.cur);
+    if (file && e) ocFromFile(e.id, file);
   });
   $('ofpRoute').onclick = () => {
     const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
