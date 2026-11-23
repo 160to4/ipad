@@ -324,6 +324,7 @@
   .ocbtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;margin-left:8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;vertical-align:middle}
   .ocv{margin-right:4px;font-size:14px;display:inline-block;line-height:1.5}
   .paxrow{display:inline-flex;align-items:flex-end;gap:2px;flex-wrap:wrap}
+  .ofpf .v .brline{display:block;margin-left:0;white-space:nowrap}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
@@ -763,7 +764,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.62';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.63';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1516,13 +1517,26 @@
     //  excess fuel → lands with it, less the cost of carrying it (burn add per 1000KG).
     //  Manual −/+ is kept as an offset on top, saved per OFP.
     const zfwNow = pzKg != null ? (dz ? up1(pzKg + dz * 1000) : d.pzfw) : null;
-    const xsCarry = xs > 0 && rates.add != null ? xs * rates.add : (xs < 0 && rates.less != null ? xs * rates.less : 0);
+    const xsCarry = 0;   // excess fuel is assumed to land as extra fuel, kg for kg
     const ldgAuto = ldg != null ? Math.round((ldg + xs - xsCarry / 1000) * 10) / 10 : null;
     const ldgOff = (ofp.ldgD && ofp.ldgD[e.id]) || 0;
     const ldgNow = ldgAuto != null ? Math.round((ldgAuto + ldgOff) * 10) / 10 : null;
     const ldgCtl = `<span class="adj" style="margin-left:0"><button data-ldg="-1" aria-label="Landing fuel minus 0.1">−</button><input id="ofpLdg" inputmode="decimal" value="${ldgNow != null ? ldgNow.toFixed(1) : ''}" class="${ldgOff ? 'on' : ''}" aria-label="Landing fuel in tonnes"><button data-ldg="1" aria-label="Landing fuel plus 0.1">+</button></span>`;
     const ldw = zfwNow != null && ldgNow != null ? Math.round((zfwNow + ldgNow) * 10) / 10 : null;
     const ldgWhy = ldgAuto != null && ldgAuto !== ldg ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(xs)} ${Math.abs(xs).toFixed(1)} excess${xsCarry ? ` ${sgn(-xsCarry)} ${(Math.abs(xsCarry) / 1000).toFixed(3)} carry` : ''}${ldgOff ? ` ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual` : ''}</span>` : (ldgOff ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual</span>` : '');
+    // Burn-off row: heavier ZFW → more burn; LDG follows excess fuel and the manual −/+
+    let burnV = null;
+    if (d.burn != null){
+      const burnChg = dz && !noRate && burnKg;
+      const bNew = burnChg ? up1(d.burn * 1000 + burnKg) : d.burn;
+      const ldgChg = ldg != null && ldgNow != null && ldgNow !== ldg;
+      burnV = (burnChg ? `${tn(d.burn)}<span class="arrow">→</span><span class="new">${bNew.toFixed(1)}<small>T</small></span>` : tn(d.burn))
+        + (ldg != null ? `<span class="br${ldgChg || burnChg ? ' brline' : ''}">(LDG ${ldgChg ? `${ldg.toFixed(1)}<span class="arrow">→</span><span class="new">${ldgNow.toFixed(1)}</span>` : ldg.toFixed(1)}T)</span>` : '');
+      const why = [];
+      if (burnChg) why.push(`burn ${sgn(burnKg)}${Math.round(Math.abs(burnKg))}KG (ZFW ${dz > 0 ? '+' : '−'}${Math.abs(dz).toFixed(1)}T)`);
+      if (ldgChg) why.push(`LDG ${[xs ? `${sgn(xs)}${Math.abs(xs).toFixed(1)} excess` : '', ldgOff ? `${sgn(ldgOff)}${Math.abs(ldgOff).toFixed(1)} manual` : ''].filter(Boolean).join(' ')}`);
+      if (why.length) burnV += why.map(w => `<span class="calc">${w}</span>`).join('');
+    }
     const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? hlB(tn(ldw)) : '—'}</span></span>${ldgWhy}`;
     if (dz || xs){
       const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
@@ -1554,7 +1568,7 @@
         ${ofpField('FL · CI', d.fl || d.ci != null ? `${d.fl ? hlB('FL' + ofpEsc(d.fl)) : '—'}<span class="sep">·</span><span class="kl">Cost index</span> ${d.ci != null ? hlB(ofpEsc(d.ci)) : '—'}${brief ? '<span class="bn">(4)</span>' : ''}` : null, false, '', brief ? 3 : 0)}
         ${ofpField('PZFW', d.pzfw == null ? null : (dz ? pzfwV : hlB(tn(d.pzfw))) + adjCtl, false, '', brief ? 1 : 0)}
         ${ofpField('PTOW', ptowV)}
-        ${ofpField('Burn-off', d.burn == null ? null : tn(d.burn) + (ldg != null ? `<span class="br">(LDG ${ldg.toFixed(1)}T)</span>` : ''))}
+        ${ofpField('Burn-off', burnV)}
         ${ofpField('Reserves', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
         ${ofpField('Excess fuel', xsCtl)}
         ${ofpField('Fuel in tanks', fitV)}
