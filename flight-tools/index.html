@@ -335,8 +335,8 @@
   .vref .vbuf{margin-left:10px;color:var(--dim);font-weight:400;font-size:.85em}
   .crewhd{display:flex;align-items:center;gap:8px}
   .crewclr{font:inherit;font-size:9px;letter-spacing:.05em;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 6px;cursor:pointer}
-  .ezrow{display:flex;align-items:center;flex-wrap:nowrap;gap:4px;margin-top:6px;white-space:nowrap}
-  .ezrow .adj{margin-left:6px}
+  .ofpf.zfwf{row-gap:6px;align-items:center}
+  .ofpf .zfwv{display:flex;align-items:center;white-space:nowrap}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
@@ -776,7 +776,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.69';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.70';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1535,7 +1535,10 @@
     const ldgOff = (ofp.ldgD && ofp.ldgD[e.id]) || 0;
     const ldgNow = ldgAuto != null ? Math.round((ldgAuto + ldgOff) * 10) / 10 : null;
     const ldgCtl = `<span class="adj" style="margin-left:0"><button data-ldg="-1" aria-label="Landing fuel minus 0.1">−</button><input id="ofpLdg" inputmode="decimal" value="${ldgNow != null ? ldgNow.toFixed(1) : ''}" class="${ldgOff ? 'on' : ''}" aria-label="Landing fuel in tonnes"><button data-ldg="1" aria-label="Landing fuel plus 0.1">+</button></span>`;
-    const ldw = zfwNow != null && ldgNow != null ? Math.round((zfwNow + ldgNow) * 10) / 10 : null;
+    const azOff = (ofp.azD && ofp.azD[e.id]) || 0;
+    const azNow = zfwNow != null ? Math.round((zfwNow + azOff) * 10) / 10 : null;
+    const azCtl = `<span class="adj" style="margin-left:0"><button data-az="-1" aria-label="AZFW minus 0.1">−</button><input id="ofpAz" inputmode="decimal" value="${azNow != null ? azNow.toFixed(1) : ''}" class="${azOff ? 'on' : ''}" aria-label="Actual ZFW in tonnes"><button data-az="1" aria-label="AZFW plus 0.1">+</button></span>`;
+    const ldw = azNow != null && ldgNow != null ? Math.round((azNow + ldgNow) * 10) / 10 : null;
     const ldgWhy = ldgAuto != null && ldgAuto !== ldg ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(xs)} ${Math.abs(xs).toFixed(1)} excess${xsCarry ? ` ${sgn(-xsCarry)} ${(Math.abs(xsCarry) / 1000).toFixed(3)} carry` : ''}${ldgOff ? ` ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual` : ''}</span>` : (ldgOff ? `<span class="calc">OFP ${ldg.toFixed(1)} ${sgn(ldgOff)} ${Math.abs(ldgOff).toFixed(1)} manual</span>` : '');
     // Burn-off row: heavier ZFW → more burn; LDG follows excess fuel and the manual −/+
     let burnV = null;
@@ -1563,7 +1566,7 @@
         vrefV = `<span class="vref"><span class="kl">Vref+5</span><b style="color:${col}">${v5}</b><small class="dimtxt">kt</small><span class="vbuf">${buf.toFixed(1)}T to ${v5 - 1}kt</span></span>`;
       }
     }
-    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? hlB(tn(ldw)) : '—'}</span></span>${ldgWhy}`;
+    const landV = `<span class="landrow"><span><span class="kl">AZFW</span>${azNow != null ? azCtl : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? tn(ldw) : '—'}</span></span>${ldgWhy}`;
     if (dz || xs){
       const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
       if (fitKg != null){
@@ -1592,7 +1595,7 @@
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}${blk != null ? `<span class="br">(${hm(blk)})</span>` : ''}` : null)}
         ${ofpField('Flight time', d.ft ? d.ft.replace('.', ':') + (net != null ? `<span class="br">(NET ${net < 0 ? '−' : ''}${hm(Math.abs(net))})</span>` : '') : null)}
         ${ofpField('FL · CI', d.fl || d.ci != null ? `${d.fl ? hlB('FL' + ofpEsc(d.fl)) : '—'}<span class="sep">·</span><span class="kl">Cost index</span> ${d.ci != null ? hlB(ofpEsc(d.ci)) : '—'}${brief ? '<span class="bn">(4)</span>' : ''}` : null, false, '', brief ? 3 : 0)}
-        ${ofpField('PZFW', d.pzfw == null ? null : tn(d.pzfw) + `<span class="ezrow"><span class="kl">EZFW</span>${brief ? hlB(tn(dz && pzKg != null ? up1(pzKg + dz * 1000) : d.pzfw)) : pzfwV}${adjCtl}</span>`, false, '', brief ? 1 : 0)}
+        ${d.pzfw == null ? ofpField('PZFW', null) : `<div class="ofpf zfwf"><div class="k">${brief ? '<span class="bn">(1)</span>' : ''}PZFW</div><div class="v zfwv">${tn(d.pzfw)}${adjCtl}</div><div class="k">EZFW</div><div class="v">${brief ? hlB(tn(zfwNow)) : pzfwV}</div></div>`}
         ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', burnV)}
         ${ofpField('Reserves', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
@@ -1614,14 +1617,17 @@
     const putXs  = v => { if (v == null || Math.abs(v) > 99) return; ofp.xs = ofp.xs || {}; if (v) ofp.xs[e.id] = v; else delete ofp.xs[e.id]; };
     const autoLdg = () => ldg == null ? null : Math.round((ldg + ((ofp.xs || {})[e.id] || 0)) * 10) / 10;
     const putLdg = v => { const a = autoLdg(); if (v == null || a == null || v < 0 || v > 999) return; const off = Math.round((v - a) * 10) / 10; ofp.ldgD = ofp.ldgD || {}; if (off) ofp.ldgD[e.id] = off; else delete ofp.ldgD[e.id]; };
+    const curAz = () => { if (pzKg == null) return null; const z = (ofp.adj || {})[e.id] ? up1(pzKg + ofp.adj[e.id] * 1000) : d.pzfw; return Math.round((z + ((ofp.azD || {})[e.id] || 0)) * 10) / 10; };
+    const putAz = v => { if (v == null || pzKg == null || v < 0 || v > 999) return; const z = (ofp.adj || {})[e.id] ? up1(pzKg + ofp.adj[e.id] * 1000) : d.pzfw; const off = Math.round((v - z) * 10) / 10; ofp.azD = ofp.azD || {}; if (off) ofp.azD[e.id] = off; else delete ofp.azD[e.id]; };
     const curLdg = () => { const a = autoLdg(); return a == null ? null : Math.round((a + ((ofp.ldgD || {})[e.id] || 0)) * 10) / 10; };
     // landing fuel box keeps what's typed even if excess changes in the same go
     const commit = () => {
-      const A = $('ofpAdj'), X = $('ofpXs'), L = $('ofpLdg');
+      const A = $('ofpAdj'), X = $('ofpXs'), L = $('ofpLdg'), Z = $('ofpAz');
       if (A && A.dataset.dirty) putAdj(num(A));
       if (X && X.dataset.dirty) putXs(num(X));
       if (L && L.dataset.dirty) putLdg(num(L));
-      [A, X, L].forEach(el => el && delete el.dataset.dirty);
+      if (Z && Z.dataset.dirty) putAz(num(Z));
+      [A, X, L, Z].forEach(el => el && delete el.dataset.dirty);
       save();
     };
     const redraw = () => {
@@ -1633,7 +1639,8 @@
     box.querySelectorAll('[data-adj]').forEach(b => b.onclick = () => { commit(); const k = +b.dataset.adj; putAdj(k === 0 ? 0 : Math.round((((ofp.adj || {})[e.id] || 0) + k * 0.1) * 10) / 10); save(); redraw(); });
     box.querySelectorAll('[data-xs]').forEach(b => b.onclick = () => { commit(); putXs(Math.round((((ofp.xs || {})[e.id] || 0) + (+b.dataset.xs) * 0.5) * 10) / 10); save(); redraw(); });
     box.querySelectorAll('[data-ldg]').forEach(b => b.onclick = () => { commit(); const c = curLdg(); if (c != null){ putLdg(Math.round((c + (+b.dataset.ldg) * 0.1) * 10) / 10); save(); redraw(); } });
-    ['ofpAdj', 'ofpXs', 'ofpLdg'].forEach(id => {
+    box.querySelectorAll('[data-az]').forEach(b => b.onclick = () => { commit(); const c = curAz(); if (c != null){ putAz(Math.round((c + (+b.dataset.az) * 0.1) * 10) / 10); save(); redraw(); } });
+    ['ofpAdj', 'ofpXs', 'ofpLdg', 'ofpAz'].forEach(id => {
       const inp = $(id); if (!inp) return;
       inp.classList.add('ofpstep');
       inp.addEventListener('focus', () => { inp.select(); setTimeout(() => { if (document.activeElement === inp && inp.selectionStart === inp.selectionEnd && !inp.dataset.sel) inp.select(); inp.dataset.sel = '1'; }, 0); });
