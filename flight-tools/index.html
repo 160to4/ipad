@@ -808,7 +808,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.88';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.89';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1606,10 +1606,12 @@
     const ptowFor = (z, x) => { const pk = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null); if (pk == null) return null;
       const r = z > 0 ? rates.add : rates.less, load = z > 0 && r != null ? z * r : 0;
       return z || x ? up1(pk + z * 1000 + load + x * 1000) : d.ptow; };
-    const PTOW_CAP = d.rtowKg != null ? d.rtowKg / 1000 : Math.max(351.5, d.ptow || 0);   // RTOW from the OFP; older saved OFPs fall back
+    // RTOW from the OFP (351.5 if none found); if the OFP is planned at/over it (e.g. 351,534 vs 351,500), its own PTOW is the line
+    const PTOW_CAP = Math.max(d.rtowKg != null ? d.rtowKg / 1000 : 351.5, d.ptow || 0);
     const curXs = () => (ofp.xs && ofp.xs[e.id]) || 0, curDz = () => (ofp.adj && ofp.adj[e.id]) || 0;
     const canRaise = z => { const p = ptowFor(z, curXs()); return p == null || p <= PTOW_CAP; };
     const canXs = x => { const p = ptowFor(curDz(), x); return p == null || p <= PTOW_CAP; };
+    const xsStep = () => { const x = curXs(), r = v => Math.round(v * 10) / 10; return canXs(r(x + 0.5)) ? 0.5 : canXs(r(x + 0.1)) ? 0.1 : 0; };
     const up1 = kg => Math.ceil(Math.round(kg) / 100) / 10;   // kg → tonnes, rounded up to 0.1 like the annotator
     // EZFW box: shows the EZFW itself; −/+ step it 0.1, typing sets it directly (stored as the change from PZFW)
     const ezKg0 = d.pzfwKg != null ? d.pzfwKg : (d.pzfw != null ? d.pzfw * 1000 : null);
@@ -1621,7 +1623,7 @@
     const pzfwV = dz && pzKg != null ? `<span class="new">${up1(pzKg + dz * 1000).toFixed(1)}<small>T</small></span>` : tn(d.pzfw);
     // Extra fuel loaded on top of the plan (per OFP), in 0.5T steps
     const xs = (ofp.xs && ofp.xs[e.id]) || 0;
-    const xsCtl = `<span class="adj" style="margin-left:0"><button data-xs="-1" aria-label="Excess fuel minus 0.5">−</button><input id="ofpXs" inputmode="decimal" value="${xs ? (xs > 0 ? '+' : '') + xs.toFixed(1) : '0.0'}" class="${xs ? 'on' : ''}" aria-label="Excess fuel in tonnes"><button data-xs="1" aria-label="Excess fuel plus 0.5"${canXs(Math.round((xs + 0.5) * 10) / 10) ? '' : ' disabled title="PTOW at maximum"'}>+</button></span>`;
+    const xsCtl = `<span class="adj" style="margin-left:0"><button data-xs="-1" aria-label="Excess fuel minus 0.5">−</button><input id="ofpXs" inputmode="decimal" value="${xs ? (xs > 0 ? '+' : '') + xs.toFixed(1) : '0.0'}" class="${xs ? 'on' : ''}" aria-label="Excess fuel in tonnes"><button data-xs="1" aria-label="Excess fuel plus"${xsStep() ? '' : ' disabled title="PTOW at RTOW"'}>+</button></span>`;
     const rate = dz > 0 ? rates.add : rates.less;
     const noRate = dz && rate == null;
     const burnKg = dz && !noRate ? (dz > 0 ? dz * rate : -Math.abs(dz) * rate) : 0;
@@ -1755,7 +1757,7 @@
       const n = keep && document.querySelector(keep); if (n) n.focus();
     };
     box.querySelectorAll('[data-adj]').forEach(b => b.onclick = () => { commit(); const k = +b.dataset.adj; putAdj(k === 0 ? 0 : Math.round((((ofp.adj || {})[e.id] || 0) + k * 0.1) * 10) / 10); save(); redraw(); });
-    box.querySelectorAll('[data-xs]').forEach(b => b.onclick = () => { commit(); putXs(Math.round((((ofp.xs || {})[e.id] || 0) + (+b.dataset.xs) * 0.5) * 10) / 10); save(); redraw(); });
+    box.querySelectorAll('[data-xs]').forEach(b => b.onclick = () => { commit(); const k = +b.dataset.xs, st = k > 0 ? xsStep() : 0.5; if (!st) return; putXs(Math.round((curXs() + k * st) * 10) / 10); save(); redraw(); });
     box.querySelectorAll('[data-ldg]').forEach(b => b.onclick = () => { commit(); const c = curLdg(); if (c != null){ putLdg(Math.round((c + (+b.dataset.ldg) * 0.1) * 10) / 10); save(); redraw(); } });
     box.querySelectorAll('[data-az]').forEach(b => b.onclick = () => { commit(); const c = curAz(); if (c != null){ putAz(Math.round((c + (+b.dataset.az) * 0.1) * 10) / 10); save(); redraw(); } });
     ['ofpAdj', 'ofpXs', 'ofpLdg', 'ofpAz'].forEach(id => {
