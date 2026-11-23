@@ -804,11 +804,16 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.79';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.80';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
+  // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
+  // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
+  const memo = {};
+  let storeFull = false;
   const store = {
-    get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
-    set(k, v){ try{ localStorage.setItem('fdt.'+k, JSON.stringify(v)); }catch(e){} }
+    get(k, d){ if (k in memo) return memo[k] === undefined ? d : JSON.parse(memo[k]); try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+    set(k, v){ const j = JSON.stringify(v); memo[k] = j;
+      try{ localStorage.setItem('fdt.'+k, j); }catch(e){ if (!storeFull){ storeFull = true; setTimeout(() => window.dispatchEvent(new Event('fdt-storefull')), 0); } } }
   };
   // New version installed → start with a clean scratchpad
   if (store.get('lastV', null) !== APP_V){
@@ -2141,6 +2146,13 @@
     const bar = document.createElement('div'); bar.className = 'updbar';
     bar.innerHTML = `<button class="tool" id="appUpdate">↻ Update app</button><span class="unit" id="updMsg">${APP_V}</span>`;
     document.querySelector('.card.pad').appendChild(bar);
+    const full = () => {
+      let kb = 0; try{ Object.keys(localStorage).forEach(k => kb += (k.length + (localStorage.getItem(k) || '').length) * 2 / 1024); }catch(e){}
+      const m = $('updMsg'); m.style.color = 'var(--red)';
+      m.textContent = `${APP_V} · ⚠ storage full (${Math.round(kb)} KB) — changes may not be kept`;
+    };
+    window.addEventListener('fdt-storefull', full);
+    if (storeFull) full();
     if (sessionStorage.getItem('fdt.justUpdated')){   // came in by itself → say so for a few seconds
       sessionStorage.removeItem('fdt.justUpdated');
       const m = $('updMsg'); m.textContent = `Updated to ${APP_V}`; m.style.color = 'var(--green)';
