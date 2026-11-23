@@ -807,7 +807,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.83';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.84';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1677,8 +1677,10 @@
       if (ptowKg != null){
         const taxi = d.taxiKg || 0, changed = dz || xs;
         const shown = changed ? up1(ptowKg + dz * 1000 + burnKg + xs * 1000 + taxi) : d.ptow;   // the figure on screen
-        const ramp = changed ? shown : up1(ptowKg + taxi);
-        if (shown >= MTOW) ptowV += `<span class="caution">⚠ Overweight take-off if ${Math.max(0, ramp - MTOW).toFixed(1)} taxi fuel not used</span>`;
+        // exact kg (no rounding up), then nearest 0.1T
+        const rampKg = ptowKg + (changed ? dz * 1000 + burnKg + xs * 1000 : 0) + taxi;
+        const over = Math.round(Math.max(0, rampKg - MTOW * 1000) / 100) / 10;
+        if (shown >= MTOW) ptowV += `<span class="caution">⚠ Overweight take-off if ${over.toFixed(1)} taxi fuel not used</span>`;
       }
     }
     box.innerHTML = `
