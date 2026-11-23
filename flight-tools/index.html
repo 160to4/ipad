@@ -335,6 +335,8 @@
   .vref .vbuf{margin-left:10px;color:var(--dim);font-weight:400;font-size:.85em}
   .crewhd{display:flex;align-items:center;gap:8px}
   .crewclr{font:inherit;font-size:9px;letter-spacing:.05em;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 6px;cursor:pointer}
+  .ezrow{display:flex;align-items:center;flex-wrap:nowrap;gap:4px;margin-top:6px;white-space:nowrap}
+  .ezrow .adj{margin-left:6px}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
@@ -774,7 +776,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.68';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.69';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1590,7 +1592,7 @@
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}${blk != null ? `<span class="br">(${hm(blk)})</span>` : ''}` : null)}
         ${ofpField('Flight time', d.ft ? d.ft.replace('.', ':') + (net != null ? `<span class="br">(NET ${net < 0 ? '−' : ''}${hm(Math.abs(net))})</span>` : '') : null)}
         ${ofpField('FL · CI', d.fl || d.ci != null ? `${d.fl ? hlB('FL' + ofpEsc(d.fl)) : '—'}<span class="sep">·</span><span class="kl">Cost index</span> ${d.ci != null ? hlB(ofpEsc(d.ci)) : '—'}${brief ? '<span class="bn">(4)</span>' : ''}` : null, false, '', brief ? 3 : 0)}
-        ${ofpField('PZFW', d.pzfw == null ? null : (dz ? pzfwV : hlB(tn(d.pzfw))) + adjCtl, false, '', brief ? 1 : 0)}
+        ${ofpField('PZFW', d.pzfw == null ? null : tn(d.pzfw) + `<span class="ezrow"><span class="kl">EZFW</span>${brief ? hlB(tn(dz && pzKg != null ? up1(pzKg + dz * 1000) : d.pzfw)) : pzfwV}${adjCtl}</span>`, false, '', brief ? 1 : 0)}
         ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', burnV)}
         ${ofpField('Reserves', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
