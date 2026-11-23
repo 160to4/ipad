@@ -352,6 +352,8 @@
   .crewclr{font:inherit;font-size:9px;letter-spacing:.05em;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 6px;cursor:pointer}
   .ofpf.zfwf{row-gap:6px;align-items:center}
   .ofpf .zfwv{display:flex;align-items:center;white-space:nowrap}
+  .zdiff{margin-left:10px;color:var(--amber);font-weight:600}
+  .adj input.hlin{color:var(--mag);border-color:var(--mag);font-weight:600}
   .fmc{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-variant-numeric:tabular-nums}
   .fmc .via{color:var(--dim)}
   .fmc.br .via,.fmc.br .to{color:var(--mag);font-weight:600}
@@ -805,7 +807,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.82';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.83';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1592,7 +1594,11 @@
     // PZFW adjustment (per OFP): extra fuel = change × burn add (or burn less when reducing), per 1000KG
     const dz = (ofp.adj && ofp.adj[e.id]) || 0, rates = burnRates(d.burnAdd);
     const up1 = kg => Math.ceil(Math.round(kg) / 100) / 10;   // kg → tonnes, rounded up to 0.1 like the annotator
-    const adjCtl = `<span class="adj"><button data-adj="-1" aria-label="PZFW minus 0.1">−</button><input id="ofpAdj" inputmode="decimal" value="${dz ? (dz > 0 ? '+' : '') + dz.toFixed(1) : '0.0'}" class="${dz ? 'on' : ''}" aria-label="PZFW change in tonnes"><button data-adj="1" aria-label="PZFW plus 0.1">+</button></span>`;
+    // EZFW box: shows the EZFW itself; −/+ step it 0.1, typing sets it directly (stored as the change from PZFW)
+    const ezKg0 = d.pzfwKg != null ? d.pzfwKg : (d.pzfw != null ? d.pzfw * 1000 : null);
+    const ezNow = ezKg0 != null ? (dz ? up1(ezKg0 + dz * 1000) : d.pzfw) : null;
+    const adjCtl = `<span class="adj" style="margin-left:0"><button data-adj="-1" aria-label="EZFW minus 0.1">−</button><input id="ofpAdj" inputmode="decimal" value="${ezNow != null ? ezNow.toFixed(1) : ''}" class="${brief ? 'hlin' : dz ? 'on' : ''}" aria-label="EZFW in tonnes"><button data-adj="1" aria-label="EZFW plus 0.1">+</button></span>`;
+    const dzTxt = dz ? `<span class="zdiff">${dz > 0 ? '+' : '−'}${Math.abs(dz).toFixed(1)}</span>` : '';
     let fitV = tn(d.fit), ptowV = tn(d.ptow);
     const pzKg = d.pzfwKg != null ? d.pzfwKg : (d.pzfw != null ? d.pzfw * 1000 : null);
     const pzfwV = dz && pzKg != null ? `<span class="new">${up1(pzKg + dz * 1000).toFixed(1)}<small>T</small></span>` : tn(d.pzfw);
@@ -1683,7 +1689,7 @@
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}${blk != null ? `<span class="br">(${hm(blk)})</span>` : ''}` : null)}
         ${ofpField('Flight time', d.ft ? d.ft.replace('.', ':') + (net != null ? `<span class="br">(NET ${net < 0 ? '−' : ''}${hm(Math.abs(net))})</span>` : '') : null)}
         ${ofpField('FL · CI', d.fl || d.ci != null ? `${d.fl ? hlB('FL' + ofpEsc(d.fl)) : '—'}<span class="sep">·</span><span class="kl">Cost index</span> ${d.ci != null ? hlB(ofpEsc(d.ci)) : '—'}${brief ? '<span class="bn">(4)</span>' : ''}` : null, false, '', brief ? 3 : 0)}
-        ${d.pzfw == null ? ofpField('PZFW', null) : `<div class="ofpf zfwf"><div class="k">${brief ? '<span class="bn">(1)</span>' : ''}PZFW</div><div class="v zfwv">${tn(d.pzfw)}${adjCtl}</div><div class="k">EZFW</div><div class="v">${brief ? hlB(tn(zfwNow)) : pzfwV}</div></div>`}
+        ${d.pzfw == null ? ofpField('PZFW', null) : `<div class="ofpf zfwf"><div class="k">${brief ? '<span class="bn">(1)</span>' : ''}PZFW</div><div class="v zfwv">${tn(d.pzfw)}${dzTxt}</div><div class="k">EZFW</div><div class="v zfwv">${adjCtl}</div></div>`}
         ${ofpField('PTOW', ptowV)}
         ${ofpField('Burn-off', burnV)}
         ${ofpField('Reserves', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
@@ -1713,7 +1719,7 @@
     // landing fuel box keeps what's typed even if excess changes in the same go
     const commit = () => {
       const A = $('ofpAdj'), X = $('ofpXs'), L = $('ofpLdg'), Z = $('ofpAz');
-      if (A && A.dataset.dirty) putAdj(num(A));
+      if (A && A.dataset.dirty){ const v = num(A); if (v != null && d.pzfw != null) putAdj(Math.round((v - d.pzfw) * 10) / 10); }
       if (X && X.dataset.dirty) putXs(num(X));
       if (L && L.dataset.dirty) putLdg(num(L));
       if (Z && Z.dataset.dirty) putAz(num(Z));
