@@ -93,8 +93,10 @@
   .cadj .ct{font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
   .cb{color:var(--dim);font-size:13px}
   .tostep{display:flex;align-items:center;gap:6px}
-  #view-crew-rest .tostep .btn{flex:none;width:38px;min-width:0;padding:0;font-size:20px}
+  #view-crew-rest .tostep .btn{flex:none;width:31px;min-width:0;min-height:0;height:35px;padding:0;font-size:16px}
+  body.compact #view-crew-rest .tostep .btn{height:28px}
   #view-crew-rest .tostep .num.t24{flex:none;width:92px}
+  button,.btn,input,select,.tab{touch-action:manipulation}
   .callhd{display:flex;align-items:center;gap:10px;margin:14px 0 6px}
   .crclr{font:inherit;font-size:11px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
   .cadj button:disabled{opacity:.35}
@@ -802,7 +804,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.78';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.79';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1985,6 +1987,12 @@
   const colors = ['var(--blue)','var(--violet)','var(--green)'];
 
   let crCallDraw = () => {};
+  const crCallUpd = (i, bef) => {
+    const row = $('crCall').querySelectorAll('.callrow')[i]; if (!row) return crCallDraw();
+    row.querySelector('.ct').innerHTML = hhmm(+row.dataset.end - bef);
+    const [m, p] = row.querySelectorAll('[data-call]'); m.disabled = bef >= 30; p.disabled = bef <= 0;
+    const cb = row.querySelector('.cb'); cb.textContent = `(${bef ? '−' + bef : '+0'} min)`; cb.classList.toggle('chg', bef !== 10);
+  };
   const crCallGet = () => { const a = store.get('crCallB', null); return [0, 1, 2].map(i => Array.isArray(a) && Number.isFinite(a[i]) ? a[i] : 10); };
   function crCalc(){
     const toStr = read24($('crTo')) || cr.to || '00:00'; cr.to = toStr;
@@ -2019,7 +2027,7 @@
     crCallDraw = () => {
       const bef = crCallGet();
       $('crCall').innerHTML = `<div class="callhd"><div class="label">Call at</div><button class="crclr" data-callreset>Reset</button></div>` + names.map((_, i) => `
-        <div class="callrow"><div class="tag" style="background:${colors[i]}">${i+1}</div>
+        <div class="callrow" data-end="${b[i+1]}"><div class="tag" style="background:${colors[i]}">${i+1}</div>
         <span class="cadj"><button data-call="${i}" data-d="-5" aria-label="Call ${i+1} 5 min earlier"${bef[i] >= 30 ? ' disabled' : ''}>−</button><b class="ct">${hhmm(b[i+1] - bef[i])}</b><button data-call="${i}" data-d="5" aria-label="Call ${i+1} 5 min later"${bef[i] <= 0 ? ' disabled' : ''}>+</button></span>
         <span class="cb${bef[i] !== 10 ? ' chg' : ''}">(${bef[i] ? '−' + bef[i] : '+0'} min)</span></div>`).join('');
     };
@@ -2030,7 +2038,7 @@
     const btn = ev.target.closest('[data-call]'); if (!btn || btn.disabled) return;
     const bef = crCallGet(), i = +btn.dataset.call;
     bef[i] = Math.max(0, Math.min(30, bef[i] - (+btn.dataset.d)));   // "+" = later = fewer minutes before rest end
-    store.set('crCallB', bef); crCallDraw();
+    store.set('crCallB', bef); crCallUpd(i, bef[i]);
   });
   bind24($('crTo'), crCalc);
   ['crFh','crFm'].forEach(id => $(id).addEventListener('input', crCalc));
