@@ -710,7 +710,6 @@
       <div class="nsyncrow" style="margin-bottom:0">
         <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
         <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
-        <button class="btn small" id="ofpRoute" style="display:none" title="Set DEP/DEST on the PA and Notes tabs">Use route</button>
         <button class="btn small" id="ofpBrief" style="display:none">BRIEF</button>
         <div class="nmeta" id="ofpMeta">Pick an annotated OFP PDF from Files.</div>
       </div>
@@ -781,7 +780,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.73';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.74';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1494,7 +1493,7 @@
     $('ofpRecent').innerHTML = ofp.recent.length ? ofp.recent.map(r => `<option value="${r.id}">${ofpEsc(r.label)}</option>`).join('') : '<option value="">No OFPs loaded yet</option>';
     $('ofpRecent').value = ofp.cur || '';
     $('ofpRecent').style.display = ofp.recent.length ? '' : 'none';
-    if (!e){ $('ofpBrief').style.display = 'none'; box.innerHTML = '<div class="nempty">Tap <b>Open OFP…</b> and choose an annotated OFP PDF from Files. The key figures appear here and stay saved on this iPad.</div>'; $('ofpRoute').style.display = 'none'; return; }
+    if (!e){ $('ofpBrief').style.display = 'none'; box.innerHTML = '<div class="nempty">Tap <b>Open OFP…</b> and choose an annotated OFP PDF from Files. The key figures appear here and stay saved on this iPad.</div>'; return; }
     const d = e.data, h = d.hdr || {};
     const flt = d.flight || (h.flt ? 'SIA ' + h.flt : null);
     const plan = d.plan || (h.ofp ? 'OFP ' + h.ofp : null);
@@ -1635,7 +1634,6 @@
         ${ofpField('PAX', paxV)}
         ${crewHtml}
       </div>`;
-    $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
     // Steppers (PZFW, excess, landing fuel). Typed values are saved as you type, and −/+ always step from
     // what's in the box, so iPad's "tap elsewhere doesn't leave the box" no longer loses a typed figure.
     const num = el => { const v = parseFloat(String(el.value).replace(/[−–]/g, '-').replace(/[^\d.\-]/g, '')); return isNaN(v) ? null : Math.round(v * 10) / 10; };
@@ -1700,6 +1698,7 @@
   $('crTaxiP').onclick = () => crTaxiStep(1);
   function ofpToRest(d){
     if (!d) return;
+    if (d.dep && d.arr) nSet(d.dep, d.arr);   // PA and Notes follow the OFP that's opened or picked
     if (d.ft){ const [h, m] = d.ft.split('.').map(Number); if (!isNaN(h) && !isNaN(m)){ $('crFh').value = h; $('crFm').value = pad2(m); crOfp.ft = h * 60 + m; store.set('crOfp', crOfp); } }
     if (d.std && /^\d{4}$/.test(d.std)){ crOfp.std = d.std; store.set('crOfp', crOfp); crApplyTo(); } else crCalc();
   }
@@ -1863,11 +1862,6 @@
     if (file) ocFromFile(id, file);
     else ocMsg(`Couldn’t get the picture from that drag (got: ${[...(dt.types || [])].join(', ') || 'nothing'}). Use the button instead.`);
   });
-  $('ofpRoute').onclick = () => {
-    const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
-    nSet(e.data.dep, e.data.arr);
-    $('ofpMeta').textContent = `PA and Notes set to ${e.data.dep} → ${e.data.arr}.`;
-  };
   ofpRender();
 
   // keep in step with the PA tab's Departure / Destination
