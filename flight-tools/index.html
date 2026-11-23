@@ -340,7 +340,7 @@
   .fmc{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-variant-numeric:tabular-nums}
   .fmc .via{color:var(--dim)}
   .fmc.br .via,.fmc.br .to{color:var(--mag);font-weight:600}
-  .fmcbtn{display:block;margin-top:8px;font:inherit;font-size:12px;font-weight:700;letter-spacing:.06em;padding:4px 12px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--text);cursor:pointer}
+  .fmcbtn{display:block;margin-top:8px;font:inherit;font-size:11px;text-transform:none;font-weight:700;letter-spacing:.06em;padding:4px 12px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--text);cursor:pointer}
   .fmcbtn.on{border-color:var(--mag);color:#ffb3f1;background:#3a0f33}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
@@ -781,7 +781,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.71';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.72';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -790,6 +790,7 @@
   // New version installed → start with a clean scratchpad
   if (store.get('lastV', null) !== APP_V){
     try{ Object.keys(localStorage).filter(k => k.startsWith('fdt.pad.')).forEach(k => localStorage.removeItem(k)); }catch(e){}
+    if (store.get('lastV', null)) sessionStorage.setItem('fdt.justUpdated', '1');
     store.set('lastV', APP_V);
   }
   const int = (el, max) => { let n = parseInt(el.value,10); if (isNaN(n)||n<0) n=0; if (max!=null&&n>max) n=max; return n; };
@@ -1626,10 +1627,10 @@
         ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn +/-', ba)}
         ${ofpField('OptiClimb', ocV, false, 'ocdrop')}
-        ${ofpField('Route', d.route1 || d.route ? (ofp.fmc
+        ${ofpField(`Route${d.route1 || d.route ? `<button class="fmcbtn${ofp.fmc ? ' on' : ''}" id="fmcBtn">FMC</button>` : ''}`, d.route1 || d.route ? (ofp.fmc
             ? `<span class="fmc${brief ? ' br' : ''}">${fmcLegs(d.route1 || d.route).map(([v, w]) => `<span class="via">${ofpEsc(v)}</span><span class="to">${ofpEsc(w)}</span>`).join('')}</span>`
             : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
-          + `<button class="fmcbtn${ofp.fmc ? ' on' : ''}" id="fmcBtn">FMC</button>` : null, false, 'route')}
+          : null, false, 'route')}
         <div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}</div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>
         ${ofpField('PAX', paxV)}
         ${crewHtml}
@@ -2069,6 +2070,11 @@
     const bar = document.createElement('div'); bar.className = 'updbar';
     bar.innerHTML = `<button class="tool" id="appUpdate">↻ Update app</button><span class="unit" id="updMsg">${APP_V}</span>`;
     document.querySelector('.card.pad').appendChild(bar);
+    if (sessionStorage.getItem('fdt.justUpdated')){   // came in by itself → say so for a few seconds
+      sessionStorage.removeItem('fdt.justUpdated');
+      const m = $('updMsg'); m.textContent = `Updated to ${APP_V}`; m.style.color = 'var(--green)';
+      setTimeout(() => { m.textContent = APP_V; m.style.color = ''; }, 8000);
+    }
   })();
 
   /* ---------- Init ---------- */
