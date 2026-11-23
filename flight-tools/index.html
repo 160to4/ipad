@@ -781,7 +781,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.72';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.73';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1455,11 +1455,11 @@
     const legs = []; let via = null;
     toks.forEach((t, i) => {
       if (isApt(t, i) || isProc(t)) return;
-      if (base(t) === 'DCT'){ via = 'DIR'; return; }
+      if (base(t) === 'DCT'){ via = 'DCT'; return; }
       if (isAwy(t)){ via = base(t); return; }
       if (!legs.length){ legs.push(['DCT', base(t)]); via = null; return; }
-      const v = via || 'DIR', last = legs[legs.length - 1];
-      if (v !== 'DIR' && last[0] === v) last[1] = base(t); else legs.push([v, base(t)]);
+      const v = via || 'DCT', last = legs[legs.length - 1];
+      if (v !== 'DCT' && last[0] === v) last[1] = base(t); else legs.push([v, base(t)]);
       via = null;
     });
     return legs;
