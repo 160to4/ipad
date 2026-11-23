@@ -90,8 +90,11 @@
   .callrow .tag{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-weight:700;color:#0d1117;font-size:14px}
   .cadj{display:inline-flex;align-items:center;gap:8px}
   .cadj button{width:38px;height:34px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:20px;line-height:1;padding:0;color:var(--text)}
-  .cadj .ct{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
+  .cadj .ct{font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
   .cb{color:var(--dim);font-size:13px}
+  .tostep{display:flex;align-items:center;gap:6px}
+  #view-crew-rest .tostep .btn{flex:none;width:38px;min-width:0;padding:0;font-size:20px}
+  #view-crew-rest .tostep .num.t24{flex:none;width:92px}
   .callhd{display:flex;align-items:center;gap:10px;margin:14px 0 6px}
   .crclr{font:inherit;font-size:11px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
   .cadj button:disabled{opacity:.35}
@@ -172,7 +175,7 @@
   body.compact .results{gap:6px}
   body.compact .rp{padding:7px 10px;gap:10px;border-radius:10px}
   body.compact .rp .tag{width:28px;height:28px;border-radius:8px;font-size:14px}
-  body.compact .rp .times{font-size:18px}
+  body.compact .rp .times,body.compact .cadj .ct{font-size:18px}
   body.compact .rp .dur{font-size:12px}
   body.compact .rp .dur b{font-size:15px}
   body.compact .meta{font-size:12px;gap:4px 12px}
@@ -265,7 +268,7 @@
     .grid2{grid-template-columns:1fr}
   }
   @container (max-width: 420px){
-    .rp .times{font-size:16px}
+    .rp .times,.cadj .ct{font-size:16px}
   }
 
   /* Notes */
@@ -573,13 +576,10 @@
       <div class="grid2">
         <div>
           <div class="label" style="margin-bottom:8px">Take-off time · 24h</div>
-          <input class="num t24" id="crTo" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="00:00">
-          <div class="tofp" id="crFromOfp" style="display:none">
-            <span class="unit" id="crStd">STD</span>
-            <span class="unit">+ taxi</span>
-            <button class="btn small" id="crTaxiM" aria-label="Taxi minus 1 minute">−</button>
-            <span class="tval" id="crTaxi">15</span><span class="unit">min</span>
-            <button class="btn small" id="crTaxiP" aria-label="Taxi plus 1 minute">+</button>
+          <div class="tostep">
+            <button class="btn small" id="crToM" aria-label="Take-off 1 minute earlier">−</button>
+            <input class="num t24" id="crTo" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="00:00">
+            <button class="btn small" id="crToP" aria-label="Take-off 1 minute later">+</button>
           </div>
         </div>
         <div>
@@ -802,7 +802,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.77';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.78';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1724,10 +1724,7 @@
   // Push OFP figures into the Rest tab: flight time, and take-off = STD + taxi-out (taxi fine-tuned with −/+)
   const crOfp = store.get('crOfp', {std: null, taxi: 15});
   function crApplyTo(){
-    if (!crOfp.std){ $('crFromOfp').style.display = 'none'; return; }
-    $('crFromOfp').style.display = '';
-    $('crStd').textContent = 'STD ' + crOfp.std.slice(0,2) + ':' + crOfp.std.slice(2);
-    $('crTaxi').textContent = crOfp.taxi;
+    if (!crOfp.std) return;
     const t = ((+crOfp.std.slice(0,2) * 60 + +crOfp.std.slice(2) + crOfp.taxi) % 1440 + 1440) % 1440;
     $('crTo').value = pad2(Math.floor(t/60)) + ':' + pad2(t % 60); $('crTo').classList.remove('bad'); crCalc();
     ctFromOfp();
@@ -1740,16 +1737,22 @@
     ct.time = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); ct.fromOfp = true;
     $('ctTime').value = ct.time; $('ctTime').classList.remove('bad'); ctSave();
   }
-  const crTaxiStep = k => { crOfp.taxi = Math.max(0, Math.min(120, crOfp.taxi + k)); store.set('crOfp', crOfp); crApplyTo(); };
-  $('crTaxiM').onclick = () => crTaxiStep(-1);
-  $('crTaxiP').onclick = () => crTaxiStep(1);
+  // −/+ move the take-off time itself by a minute (with an OFP loaded this is kept as its taxi time, so the CD default follows)
+  const crToStep = k => {
+    const v = read24($('crTo')) || cr.to || '00:00', [h, m] = v.split(':').map(Number);
+    const t = ((h * 60 + m + k) % 1440 + 1440) % 1440;
+    if (crOfp.std){ const std = +crOfp.std.slice(0,2) * 60 + +crOfp.std.slice(2); let tx = ((t - std) % 1440 + 1440) % 1440; if (tx > 720) tx -= 1440; crOfp.taxi = tx; store.set('crOfp', crOfp); }
+    $('crTo').value = pad2(Math.floor(t / 60)) + ':' + pad2(t % 60); $('crTo').classList.remove('bad'); crCalc(); ctFromOfp();
+  };
+  $('crToM').onclick = () => crToStep(-1);
+  $('crToP').onclick = () => crToStep(1);
   function ofpToRest(d){
     if (!d) return;
     if (d.dep && d.arr) nSet(d.dep, d.arr);   // PA and Notes follow the OFP that's opened or picked
     if (d.ft){ const [h, m] = d.ft.split('.').map(Number); if (!isNaN(h) && !isNaN(m)){ $('crFh').value = h; $('crFm').value = pad2(m); crOfp.ft = h * 60 + m; store.set('crOfp', crOfp); } }
     if (d.std && /^\d{4}$/.test(d.std)){ crOfp.std = d.std; store.set('crOfp', crOfp); crApplyTo(); } else crCalc();
   }
-  if (crOfp.std){ $('crFromOfp').style.display = ''; $('crStd').textContent = 'STD ' + crOfp.std.slice(0,2) + ':' + crOfp.std.slice(2); $('crTaxi').textContent = crOfp.taxi; }
+
   $('ofpFile').addEventListener('change', async ev => {
     const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
     if (!f) return;
