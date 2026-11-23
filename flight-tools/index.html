@@ -808,7 +808,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.87';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.88';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1467,6 +1467,14 @@
     if (o.cont == null){ const v = after(/^CONT\w*\b/, /\b(\d{6})\b/, 4); if (v) o.cont = tonnes(v); }
     if (o.excess == null){ const v = after(/EXCESS\s+FUEL(?!\s*:)/, /\b(\d{6})\b/); if (v) o.excess = tonnes(v); }
     if (o.taxiKg == null){ const v = after(/TAXI\s+FUEL/, /\b(\d{3,6})\b/, 4); if (v) o.taxiKg = +v; }
+    // RTOW, as the OFP annotator does it: lowest of RTOW (PERF/LAND/STRUC) on pages 2–4, rounded down to 100 KG
+    if (o.rtowKg == null){
+      const txt = L.filter(x => x.p >= 2 && x.p <= 4).map(x => x.l).join(' '), re = /RTOW\s*\(\s*(PERF|LAND|STRUC)\s*\)\s*(\d{6})/gi;
+      let m, low = null; while ((m = re.exec(txt))) if (!low || +m[2] < low.v) low = {t: m[1].toUpperCase(), v: +m[2]};
+      // an OFP already run through the annotator carries "RTOW 351.5 (STRUC)" instead
+      if (!low){ const re2 = /RTOW\s+(\d{3}\.\d)\s*\(\s*(PERF|LAND|STRUC)\s*\)/gi; while ((m = re2.exec(txt))){ const v = Math.round(+m[1] * 1000); if (!low || v < low.v) low = {t: m[2].toUpperCase(), v}; } }
+      if (low){ o.rtowKg = Math.floor(low.v / 100) * 100; o.rtowType = low.t; }
+    }
     if (o.altnFuel == null) o.altnFuel = after(/ALTN\s+FUEL/, /\b(\d{4,6})\b/);
     if (o.altnHold == null) o.altnHold = after(/ALTN\s+HOLD/, /\b(\d{4,6})\b/);
     if (o.pzfw == null){ const v = after(/PZFW\s*/, /^(\d{5,6})/); if (v){ o.pzfw = tonnes(v); o.pzfwKg = +v; } }
@@ -1598,7 +1606,7 @@
     const ptowFor = (z, x) => { const pk = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null); if (pk == null) return null;
       const r = z > 0 ? rates.add : rates.less, load = z > 0 && r != null ? z * r : 0;
       return z || x ? up1(pk + z * 1000 + load + x * 1000) : d.ptow; };
-    const PTOW_CAP = Math.max(351.5, d.ptow || 0);
+    const PTOW_CAP = d.rtowKg != null ? d.rtowKg / 1000 : Math.max(351.5, d.ptow || 0);   // RTOW from the OFP; older saved OFPs fall back
     const curXs = () => (ofp.xs && ofp.xs[e.id]) || 0, curDz = () => (ofp.adj && ofp.adj[e.id]) || 0;
     const canRaise = z => { const p = ptowFor(z, curXs()); return p == null || p <= PTOW_CAP; };
     const canXs = x => { const p = ptowFor(curDz(), x); return p == null || p <= PTOW_CAP; };
@@ -1684,13 +1692,14 @@
     }
     // MTOW 351.5T: if the PTOW shown is at or above it, say how much taxi fuel has to be burnt to get down to it
     {
-      const MTOW = 351.5, ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
+      const MTOW = d.rtowKg != null ? d.rtowKg / 1000 : 351.5, ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
       if (ptowKg != null){
         const taxi = d.taxiKg || 0, changed = dz || xs;
         const shown = changed ? up1(ptowKg + dz * 1000 + loadKg + xs * 1000) : d.ptow;   // the figure on screen
         // exact kg (no rounding up), then nearest 0.1T
         const rampKg = ptowKg + (changed ? dz * 1000 + loadKg + xs * 1000 : 0) + taxi;
         const over = Math.round(Math.max(0, rampKg - MTOW * 1000) / 100) / 10;
+        if (d.rtowKg != null) ptowV += `<span class="calc">RTOW ${(d.rtowKg / 1000).toFixed(1)} (${d.rtowType})</span>`;
         if (over >= 0.1) ptowV += `<span class="caution">⚠ Overweight take-off if ${over.toFixed(1)} taxi fuel not used</span>`;
       }
     }
@@ -1801,7 +1810,7 @@
       const id = String(Date.now());
       ofp.recent = [{id, label, name: f.name, at: Date.now(), data: d}, ...ofp.recent.filter(r => r.label !== label)].slice(0, 10);
       ofp.cur = id; store.set('ofp', ofp); ofpToRest(d);
-      const keys = ['flight','plan','reg','apd','std','sta','ft','fl','ci','pzfw','ptow','burn','cont','excess','reserves','altn','fit','taxiKg','route'];
+      const keys = ['flight','plan','reg','apd','std','sta','ft','fl','ci','pzfw','ptow','rtowKg','burn','cont','excess','reserves','altn','fit','taxiKg','route'];
       const found = keys.filter(k => k === 'route' ? (d.route1 || d.route) : d[k] != null && d[k] !== '').length;
       $('ofpMeta').textContent = `${f.name} · ${d.pages} pages · ${found}/${keys.length} values found`;
       ofpRender();
