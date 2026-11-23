@@ -422,6 +422,14 @@
   .parow .out{margin-left:auto;font-size:17px;font-variant-numeric:tabular-nums;font-weight:500;text-align:right}
   .parow .out.near{margin-left:4px}
   .ls{display:none}
+  .aptbox{position:relative;display:inline-flex;align-items:center;gap:8px}
+  .aptin{width:68px;text-align:center;text-transform:uppercase;letter-spacing:.06em}
+  .aptname{color:var(--dim);font-size:13px}
+  .aptsug{position:absolute;top:calc(100% + 4px);left:0;z-index:30;min-width:200px;max-height:260px;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.5);padding:4px}
+  .aptsug button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;color:var(--text);font:inherit;font-size:14px;padding:8px 10px}
+  .aptsug button b{display:inline-block;width:42px;color:var(--amber)}
+  .aptsug button:active{background:var(--bg)}
+  .aptsug .none{padding:8px 10px;color:var(--dim);font-size:13px}
   @media (max-width:900px){
     .lf{display:none} .ls{display:inline}
     .parow{grid-template-columns:92px 1fr;gap:6px 8px}
@@ -606,12 +614,15 @@
 
       <div class="parow">
         <div class="k">Multi-sector</div>
-        <div class="ctl">
-          <select class="num sel dd" id="paMs"></select>
-          <i class="vbar"></i>
-          <span class="grp"><span class="unit"><span class="lf">Departure</span><span class="ls">Dep</span></span><select class="num sel dd" id="paDep"></select></span>
-          <span class="grp"><span class="unit"><span class="lf">Destination</span><span class="ls">Dest</span></span><select class="num sel dd" id="paDest"></select></span>
-        </div>
+        <div class="ctl"><select class="num sel dd" id="paMs"></select></div>
+      </div>
+      <div class="parow">
+        <div class="k">Dep</div>
+        <div class="ctl"><span class="aptbox"><input class="num aptin" id="paDepIn" data-sel="paDep" maxlength="3" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="—" aria-label="Departure airport"><span class="aptname" id="paDepName"></span><div class="aptsug" hidden></div></span><select id="paDep" hidden></select></div>
+      </div>
+      <div class="parow">
+        <div class="k">Dest</div>
+        <div class="ctl"><span class="aptbox"><input class="num aptin" id="paDestIn" data-sel="paDest" maxlength="3" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="—" aria-label="Destination airport"><span class="aptname" id="paDestName"></span><div class="aptsug" hidden></div></span><select id="paDest" hidden></select></div>
       </div>
 
       <div class="parow">
@@ -788,7 +799,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.75';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.76';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1110,7 +1121,8 @@
     const el = $(id);
     el.innerHTML = (optional ? `<option value="">${blank ?? '—'}</option>` : '') +
       options.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
-    const paint = () => { el.value = pa[key]; el.classList.toggle('empty', !pa[key]); };
+    const paint = () => { el.value = pa[key]; el.classList.toggle('empty', !pa[key]);
+      const box = $(id + 'In'); if (box && document.activeElement !== box){ box.value = pa[key] || ''; $(id + 'Name').textContent = pa[key] && APT[pa[key]] ? APT[pa[key]].name : ''; } };
     el.addEventListener('change', () => { pa[key] = el.value; paint(); paSave(); paRender(); });
     paint(); return paint;
   }
@@ -1123,6 +1135,30 @@
     chipGroup('paRain','rain',[['recent rain','Recent rain'],['rain reported','Rain reported'],['light rain','Light rain'],['heavy rain','Heavy rain']], true, ''),
     chipGroup('paOther','other',[['hazy','Hazy'],['foggy','Foggy'],['snow','Snow'],['gusty','Gusty']], true, '')
   ];
+
+  // Typed airport boxes: suggestions by code (then by city name) as each letter goes in
+  document.querySelectorAll('.aptin').forEach(inp => {
+    const sel = $(inp.dataset.sel), sug = inp.parentElement.querySelector('.aptsug');
+    const pick = c => { inp.value = c; sug.hidden = true; if (sel.value !== c){ sel.value = c; sel.dispatchEvent(new Event('change')); } inp.blur(); };
+    const show = () => {
+      const q = inp.value.trim().toUpperCase(); if (!q){ sug.hidden = true; return; }
+      const byCode = AIRPORTS.filter(([c]) => c.startsWith(q)), byName = AIRPORTS.filter(([c, n]) => !c.startsWith(q) && n.toUpperCase().includes(q));
+      const hits = [...byCode, ...byName].slice(0, 8);
+      sug.innerHTML = hits.length ? hits.map(([c, n]) => `<button type="button" data-c="${c}"><b>${c}</b> ${n}</button>`).join('') : '<div class="none">No match</div>';
+      sug.hidden = false;
+    };
+    inp.addEventListener('focus', () => { inp.select(); });
+    inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, ''); const n = $(inp.dataset.sel + 'Name'); n.textContent = APT[inp.value] ? APT[inp.value].name : ''; show(); });
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ const f = sug.querySelector('[data-c]'); if (f) pick(f.dataset.c); else inp.blur(); } });
+    sug.addEventListener('pointerdown', ev => { const b = ev.target.closest('[data-c]'); if (b){ ev.preventDefault(); pick(b.dataset.c); } });
+    inp.addEventListener('blur', () => setTimeout(() => {
+      sug.hidden = true;
+      const v = inp.value.trim().toUpperCase();
+      if (v && APT[v] && v !== sel.value){ sel.value = v; sel.dispatchEvent(new Event('change')); }
+      else if (!v && sel.value){ sel.value = ''; sel.dispatchEvent(new Event('change')); }
+      inp.value = sel.value; $(inp.dataset.sel + 'Name').textContent = sel.value && APT[sel.value] ? APT[sel.value].name : '';
+    }, 0));
+  });
 
   function paLoad(){
     $('paLand').value = pa.land; $('paTaxi').value = pa.taxi; $('paTc').value = pa.tc;
@@ -1813,6 +1849,7 @@
   document.addEventListener('pointerdown', ev => {
     const a = document.activeElement;
     if (a && a.matches && a.matches('.ofpstep') && ev.target !== a && !ev.target.closest('.adj button')) a.blur();
+    if (a && a.matches && a.matches('.aptin') && ev.target !== a && !ev.target.closest('.aptsug')) a.blur();
   }, true);
   $('ofpOut').addEventListener('click', ev => {
     if (ev.target.id !== 'crewClr') return;
