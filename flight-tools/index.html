@@ -774,7 +774,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.67';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.68';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1797,21 +1797,34 @@
     const id = inp.dataset.oc, file = inp.files[0]; inp.value = '';
     ocFromFile(id, file);
   });
-  // Drag a screenshot (e.g. the thumbnail iPad shows after taking one) anywhere onto the OFP tab → OptiClimb
-  const dragImg = ev => [...((ev.dataTransfer && ev.dataTransfer.items) || [])].some(i => i.kind === 'file' && (!i.type || i.type.startsWith('image/')));
+  // Drag a screenshot (e.g. the thumbnail iPad shows after taking one) onto the OFP tab → OptiClimb.
+  // iPad hides what's being dragged until the drop, so accept any drag, then look for an image in every form it can arrive in.
   const ocField = () => document.querySelector('#ofpOut .ocdrop');
-  ['dragenter', 'dragover'].forEach(t => $('ofpOut').addEventListener(t, ev => {
-    if (!ocField() || !dragImg(ev)) return;
-    ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; ocField().classList.add('dragon');
-  }));
-  $('ofpOut').addEventListener('dragleave', ev => { if (!ev.relatedTarget || !$('ofpOut').contains(ev.relatedTarget)){ const f = ocField(); if (f) f.classList.remove('dragon'); } });
-  $('ofpOut').addEventListener('drop', ev => {
-    const f = ocField(); if (!f) return;
-    ev.preventDefault(); f.classList.remove('dragon');
-    const dt = ev.dataTransfer, file = [...(dt.files || [])].find(x => !x.type || x.type.startsWith('image/'))
-      || [...(dt.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).find(Boolean);
-    const e = ofp.recent.find(r => r.id === ofp.cur);
-    if (file && e) ocFromFile(e.id, file);
+  const ocMsg = t => { const m = $('ocMsg'); if (m) m.textContent = t; };
+  const curId = () => { const e = ofp.recent.find(r => r.id === ofp.cur); return e && e.id; };
+  let dragDepth = 0;
+  document.addEventListener('dragenter', ev => {
+    if (!ocField() || !$('view-ofp').classList.contains('active')) return;
+    ev.preventDefault(); dragDepth++; ocField().classList.add('dragon'); ocMsg('Let go to read the screenshot');
+  });
+  document.addEventListener('dragover', ev => {
+    if (!ocField() || !$('view-ofp').classList.contains('active')) return;
+    ev.preventDefault(); try{ ev.dataTransfer.dropEffect = 'copy'; }catch(e){}
+  });
+  document.addEventListener('dragleave', () => { if (--dragDepth <= 0){ dragDepth = 0; const f = ocField(); if (f) f.classList.remove('dragon'); } });
+  document.addEventListener('drop', async ev => {
+    const f = ocField(); if (!f || !$('view-ofp').classList.contains('active')) return;
+    ev.preventDefault(); dragDepth = 0; f.classList.remove('dragon');
+    const dt = ev.dataTransfer, id = curId(); if (!dt || !id) return;
+    let file = [...(dt.files || [])].find(x => !x.type || x.type.startsWith('image/'));
+    if (!file) file = [...(dt.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).find(Boolean);
+    if (!file){   // some apps hand over a link or an <img> instead of a file
+      const html = dt.getData('text/html') || '', uri = (dt.getData('text/uri-list') || dt.getData('text/plain') || '').trim();
+      const src = (html.match(/<img[^>]+src=["']([^"']+)/i) || [])[1] || (/^(data:image|blob:|https?:)/.test(uri) ? uri : '');
+      if (src){ try{ const r = await fetch(src); const bl = await r.blob(); if (bl.type.startsWith('image/')) file = bl; }catch(e){} }
+    }
+    if (file) ocFromFile(id, file);
+    else ocMsg(`Couldn’t get the picture from that drag (got: ${[...(dt.types || [])].join(', ') || 'nothing'}). Use the button instead.`);
   });
   $('ofpRoute').onclick = () => {
     const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
