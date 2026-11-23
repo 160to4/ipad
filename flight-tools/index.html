@@ -337,6 +337,11 @@
   .crewclr{font:inherit;font-size:9px;letter-spacing:.05em;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 6px;cursor:pointer}
   .ofpf.zfwf{row-gap:6px;align-items:center}
   .ofpf .zfwv{display:flex;align-items:center;white-space:nowrap}
+  .fmc{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-variant-numeric:tabular-nums}
+  .fmc .via{color:var(--dim)}
+  .fmc.br .via,.fmc.br .to{color:var(--mag);font-weight:600}
+  .fmcbtn{display:block;margin-top:8px;font:inherit;font-size:12px;font-weight:700;letter-spacing:.06em;padding:4px 12px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--text);cursor:pointer}
+  .fmcbtn.on{border-color:var(--mag);color:#ffb3f1;background:#3a0f33}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
@@ -776,7 +781,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.70';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.71';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1440,6 +1445,24 @@
     });
     return toks.map((t, i) => hl[i] ? `<span class="hl">${esc(t)}</span>` : esc(t)).join(' ');
   }
+  // FMC RTE view: DCT first waypoint, then one line per airway (to its exit point), DIR for directs
+  function fmcLegs(route){
+    const toks = route.trim().split(/\s+/), base = t => t.replace(/\/.*$/, '');
+    const isApt = (t, i) => (i === 0 || i === toks.length - 1) && /^[A-Z]{4}$/.test(base(t));
+    const isAwy = t => /^[A-Z]{1,2}\d{1,4}[A-Z]?$/.test(base(t));
+    const isProc = t => !isAwy(t) && /^[A-Z]{3,6}\d[A-Z]?$/.test(base(t));
+    const legs = []; let via = null;
+    toks.forEach((t, i) => {
+      if (isApt(t, i) || isProc(t)) return;
+      if (base(t) === 'DCT'){ via = 'DIR'; return; }
+      if (isAwy(t)){ via = base(t); return; }
+      if (!legs.length){ legs.push(['DCT', base(t)]); via = null; return; }
+      const v = via || 'DIR', last = legs[legs.length - 1];
+      if (v !== 'DIR' && last[0] === v) last[1] = base(t); else legs.push([v, base(t)]);
+      via = null;
+    });
+    return legs;
+  }
   function burnRates(list){
     const r = {add: null, less: null};
     (list || []).forEach(({label, value}) => {
@@ -1603,7 +1626,10 @@
         ${ofpField('Fuel in tanks', fitV)}
         ${ofpField('Burn +/-', ba)}
         ${ofpField('OptiClimb', ocV, false, 'ocdrop')}
-        ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
+        ${ofpField('Route', d.route1 || d.route ? (ofp.fmc
+            ? `<span class="fmc${brief ? ' br' : ''}">${fmcLegs(d.route1 || d.route).map(([v, w]) => `<span class="via">${ofpEsc(v)}</span><span class="to">${ofpEsc(w)}</span>`).join('')}</span>`
+            : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
+          + `<button class="fmcbtn${ofp.fmc ? ' on' : ''}" id="fmcBtn">FMC</button>` : null, false, 'route')}
         <div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}</div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>
         ${ofpField('PAX', paxV)}
         ${crewHtml}
@@ -1698,6 +1724,7 @@
   });
   $('ofpRecent').addEventListener('change', () => { ofp.cur = $('ofpRecent').value; store.set('ofp', ofp); ofpRender();
     const e = ofp.recent.find(r => r.id === ofp.cur); if (e){ $('ofpMeta').textContent = e.name; ofpToRest(e.data); } });
+  $('ofpOut').addEventListener('click', ev => { if (ev.target.id === 'fmcBtn'){ ofp.fmc = !ofp.fmc; store.set('ofp', ofp); ofpRender(); } });
   $('ofpBrief').onclick = () => { ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpRender(); };
 
   /* ---------- OptiClimb: read TGT SPD / SPD RESTR from an eWAS screenshot (on-device text recognition) ---------- */
