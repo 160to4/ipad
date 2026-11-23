@@ -86,6 +86,13 @@
   .seg button.on{background:var(--panel2);color:var(--text)}
   .num.t24{width:150px;font-size:28px;letter-spacing:.02em}
   .num.bad{border-color:var(--red);color:var(--red)}
+  .callrow{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:6px}
+  .callrow .tag{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-weight:700;color:#0d1117;font-size:14px}
+  .cadj{display:inline-flex;align-items:center;gap:8px}
+  .cadj button{width:38px;height:34px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:20px;line-height:1;padding:0;color:var(--text)}
+  .cadj .ct{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
+  .cb{color:var(--dim);font-size:13px}
+  .cb.chg{color:var(--amber)}
   .results{display:flex;flex-direction:column;gap:10px;margin-top:4px}
   .rp{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
   .rp .tag{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-weight:700;color:#0d1117}
@@ -585,6 +592,7 @@
       <div class="bar" id="crBar"></div>
       <div class="ticks" id="crTicks"></div>
       <div class="results" id="crOut" style="margin-top:14px"></div>
+      <div class="calls" id="crCall"></div>
     </div>
   </section>
 
@@ -780,7 +788,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.74';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.75';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1962,7 +1970,20 @@
       names.map((_,i)=>`<div style="left:${pct(b[i])};width:calc(${pct(b[i+1])} - ${pct(b[i])});background:${colors[i]};opacity:.85;border-left:2px solid var(--bg)"></div>`).join('') +
       `<div class="cap" style="left:${pct(re)};right:0"></div>`;
     $('crTicks').innerHTML = `<span>T/O ${hhmm(to)}</span><span>LDG ${hhmm(land)}</span>`;
+    // Call times: rest end − 10 min by default, −/+ in 5-min steps (kept per rest)
+    const off = store.get('crCall', [0, 0, 0]);
+    $('crCall').innerHTML = `<div class="label" style="margin:14px 0 6px">Call at</div>` + names.map((_, i) => {
+      const before = 10 - (off[i] || 0);
+      return `<div class="callrow"><div class="tag" style="background:${colors[i]}">${i+1}</div>
+        <span class="cadj"><button data-call="${i}" data-d="-5" aria-label="Call ${i+1} 5 min earlier">−</button><b class="ct">${hhmm(b[i+1] - before)}</b><button data-call="${i}" data-d="5" aria-label="Call ${i+1} 5 min later">+</button></span>
+        <span class="cb${off[i] ? ' chg' : ''}">(${before >= 0 ? '−' : '+'}${Math.abs(before)} min)</span></div>`;
+    }).join('');
   }
+  $('crCall').addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-call]'); if (!btn) return;
+    const off = store.get('crCall', [0, 0, 0]), i = +btn.dataset.call;
+    off[i] = Math.max(-60, Math.min(60, (off[i] || 0) + +btn.dataset.d)); store.set('crCall', off); crCalc();
+  });
   bind24($('crTo'), crCalc);
   ['crFh','crFm'].forEach(id => $(id).addEventListener('input', crCalc));
   document.querySelectorAll('#crCrew button').forEach(btn => btn.onclick = () => {
