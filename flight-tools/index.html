@@ -807,7 +807,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.85';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.86';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1666,12 +1666,11 @@
       const ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
       if (ptowKg != null){
         const taxi = d.taxiKg != null ? d.taxiKg : null;
-        const np = up1(ptowKg + dz * 1000 + loadKg + xs * 1000 + (taxi || 0));
-        const parts = [(ptowKg/1000).toFixed(1)];
+        const np = up1(ptowKg + dz * 1000 + loadKg + xs * 1000);   // take-off weight, no taxi fuel
+        const parts = [(d.ptow != null ? d.ptow : ptowKg / 1000).toFixed(1)];
         if (dz) parts.push(`${sgn(dz)} ${Math.abs(dz).toFixed(1)}`); if (loadKg) parts.push(`+ ${(loadKg/1000).toFixed(3)} fuel`);
         if (xs) parts.push(`${sgn(xs)} ${Math.abs(xs).toFixed(1)} excess`);
-        if (taxi != null) parts.push(`+ ${(taxi/1000).toFixed(1)} taxi`);
-        ptowV = `${tn(d.ptow)}<span class="arrow">→</span><span class="new">${np.toFixed(1)}<small>T</small></span><span class="calc">${parts.join(' ')}${taxi == null ? ' · taxi fuel not found (reopen the OFP)' : ''}</span>`;
+        ptowV = `${tn(d.ptow)}<span class="arrow">→</span><span class="new">${np.toFixed(1)}<small>T</small></span><span class="calc">${parts.join(' ')}</span>`;
       }
     }
     // MTOW 351.5T: if the PTOW shown is at or above it, say how much taxi fuel has to be burnt to get down to it
@@ -1679,11 +1678,11 @@
       const MTOW = 351.5, ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
       if (ptowKg != null){
         const taxi = d.taxiKg || 0, changed = dz || xs;
-        const shown = changed ? up1(ptowKg + dz * 1000 + loadKg + xs * 1000 + taxi) : d.ptow;   // the figure on screen
+        const shown = changed ? up1(ptowKg + dz * 1000 + loadKg + xs * 1000) : d.ptow;   // the figure on screen
         // exact kg (no rounding up), then nearest 0.1T
         const rampKg = ptowKg + (changed ? dz * 1000 + loadKg + xs * 1000 : 0) + taxi;
         const over = Math.round(Math.max(0, rampKg - MTOW * 1000) / 100) / 10;
-        if (shown >= MTOW && over >= 0.1) ptowV += `<span class="caution">⚠ Overweight take-off if ${over.toFixed(1)} taxi fuel not used</span>`;
+        if (over >= 0.1) ptowV += `<span class="caution">⚠ Overweight take-off if ${over.toFixed(1)} taxi fuel not used</span>`;
       }
     }
     box.innerHTML = `
