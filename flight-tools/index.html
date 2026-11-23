@@ -325,7 +325,10 @@
   .ocv{margin-right:4px;font-size:14px;display:inline-block;line-height:1.5}
   .paxrow{display:inline-flex;align-items:flex-end;gap:2px;flex-wrap:wrap}
   .ofpf .v .brline{display:block;margin-left:0;white-space:nowrap}
-  .vref{display:flex;align-items:baseline;gap:3px;margin-top:6px;white-space:nowrap}
+  .vref{display:flex;align-items:baseline;gap:3px;white-space:nowrap}
+  .ofpf.landf{row-gap:6px}
+  .ofpf .appk{padding-left:10px;font-size:10px}
+  .ofpf .appk small{font-weight:400;text-transform:none;letter-spacing:0}
   .vref b{font-size:1.25em;font-weight:600}
   .vref .dimtxt{color:var(--dim);font-weight:400}
   .vref .vbuf{margin-left:10px;color:var(--dim);font-weight:400;font-size:.85em}
@@ -768,7 +771,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.64';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.65';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('fdt.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -1554,7 +1557,7 @@
         vrefV = `<span class="vref"><span class="kl">Vref+5</span><b style="color:${col}">${v5}</b><small class="dimtxt">kt</small><span class="vbuf">${buf.toFixed(1)}T to ${v5 - 1}kt</span></span>`;
       }
     }
-    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? hlB(tn(ldw)) : '—'}</span></span>${vrefV}${ldgWhy}`;
+    const landV = `<span class="landrow"><span><span class="kl">ZFW</span>${zfwNow != null ? (dz ? `<span class="new">${zfwNow.toFixed(1)}<small>T</small></span>` : tn(zfwNow)) : '—'}</span><span><span class="kl">Fuel</span>${ldgCtl}</span><span><span class="kl">LDW</span>${ldw != null ? hlB(tn(ldw)) : '—'}</span></span>${ldgWhy}`;
     if (dz || xs){
       const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
       if (fitKg != null){
@@ -1592,21 +1595,29 @@
         ${ofpField('Burn +/-', ba)}
         ${ofpField('OptiClimb', ocV)}
         ${ofpField('Route', d.route1 || d.route ? (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)) : null, false, 'route')}
-        ${ofpField('Landing', landV)}
+        <div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}</div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>
         ${ofpField('PAX', paxV)}
         ${crewHtml}
       </div>`;
     $('ofpRoute').style.display = d.dep && d.arr ? '' : 'none';
-    // stepper events
-    const setAdj = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.adj = ofp.adj || {}; if (v) ofp.adj[e.id] = v; else delete ofp.adj[e.id]; store.set('ofp', ofp); ofpRender(); };
+    // stepper events — re-render once focus has moved on, then put the cursor back in the box that was tapped
+    // (re-rendering replaces every box, so without this a second typed value was lost)
+    const reRender = () => setTimeout(() => {
+      const a = document.activeElement, inOut = a && a.matches && a.matches('#ofpOut input');
+      const sel = inOut ? (a.id ? '#' + a.id : a.dataset.pax != null ? `.paxin[data-pax="${a.dataset.pax}"]` : a.dataset.crew ? `.crewin[data-crew="${a.dataset.crew}"]` : null) : null;
+      ofpRender();
+      const n = sel && document.querySelector(sel); if (n) n.focus();
+    }, 0);
+    const setAdj = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.adj = ofp.adj || {}; if (v) ofp.adj[e.id] = v; else delete ofp.adj[e.id]; store.set('ofp', ofp); reRender(); };
     box.querySelectorAll('[data-adj]').forEach(b => b.onclick = () => { const k = +b.dataset.adj; setAdj(k === 0 ? 0 : dz + k * 0.1); });
-    const setXs = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.xs = ofp.xs || {}; if (v) ofp.xs[e.id] = v; else delete ofp.xs[e.id]; store.set('ofp', ofp); ofpRender(); };
+    const setXs = v => { v = Math.round(v * 10) / 10; if (Math.abs(v) > 99) return; ofp.xs = ofp.xs || {}; if (v) ofp.xs[e.id] = v; else delete ofp.xs[e.id]; store.set('ofp', ofp); reRender(); };
     box.querySelectorAll('[data-xs]').forEach(b => b.onclick = () => setXs(xs + (+b.dataset.xs) * 0.5));
-    const setLdg = v => { if (ldgAuto == null) return; v = Math.round(v * 10) / 10; if (v < 0 || v > 999) return; const off = Math.round((v - ldgAuto) * 10) / 10; ofp.ldgD = ofp.ldgD || {}; if (off) ofp.ldgD[e.id] = off; else delete ofp.ldgD[e.id]; store.set('ofp', ofp); ofpRender(); };
+    const setLdg = v => { if (ldgAuto == null) return; v = Math.round(v * 10) / 10; if (v < 0 || v > 999) return; const off = Math.round((v - ldgAuto) * 10) / 10; ofp.ldgD = ofp.ldgD || {}; if (off) ofp.ldgD[e.id] = off; else delete ofp.ldgD[e.id]; store.set('ofp', ofp); reRender(); };
     box.querySelectorAll('[data-ldg]').forEach(b => b.onclick = () => { if (ldgNow != null) setLdg(ldgNow + (+b.dataset.ldg) * 0.1); });
     [['ofpAdj', setAdj], ['ofpXs', setXs], ['ofpLdg', v => setLdg(Math.abs(v))]].forEach(([id, set]) => {
       const inp = $(id); if (!inp) return;
-      inp.addEventListener('focus', () => setTimeout(() => inp.select(), 0));
+      inp.addEventListener('focus', () => { inp.select(); setTimeout(() => { if (document.activeElement === inp && inp.selectionStart === inp.selectionEnd && inp.dataset.sel !== '1'){ inp.select(); } inp.dataset.sel = '1'; }, 0); });
+      inp.addEventListener('blur', () => { inp.dataset.sel = ''; });
       inp.addEventListener('change', () => { const v = parseFloat(inp.value.replace(/[^\d.\-+]/g, '')); set(isNaN(v) ? 0 : v); });
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
     });
