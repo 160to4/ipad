@@ -887,7 +887,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.97';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.98';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1250,7 +1250,7 @@
     // one filter at a time; tap the chosen one again to show everything
     const toTop = () => { window.scrollTo(0, 0); $('view-tools').scrollTop = 0; };
     $('rvFilter').addEventListener('click', ev => { const b = ev.target.closest('[data-f]'); if (!b) return;
-      if (b.dataset.f === 'M'){ f = 'M'; store.set('rvF', f); draw(); toTop(); return; }   // Modern: always (re)opens at the top
+      if (b.dataset.f === 'M' && f !== 'M'){ f = 'M'; store.set('rvF', f); draw(); toTop(); return; }   // into Modern: open at the top; tapping it again shows the full list
       f = f === b.dataset.f ? '' : b.dataset.f; store.set('rvF', f); draw(); });
     document.querySelector('.tab[data-view="tools"]').addEventListener('click', () => { if (f === 'M') requestAnimationFrame(toTop); });
     // tap a row to highlight it (the previous one un-highlights)
