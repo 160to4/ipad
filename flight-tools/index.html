@@ -93,9 +93,9 @@
   .cadj .ct{font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
   .cb{color:var(--dim);font-size:13px}
   .tostep{display:flex;align-items:center;gap:6px}
-  #view-crew-rest .tostep .btn{flex:none;width:31px;min-width:0;min-height:0;height:35px;padding:0;font-size:16px}
-  body.compact #view-crew-rest .tostep .btn{height:28px}
-  #view-crew-rest .tostep .num.t24{flex:none;width:92px}
+  #restPanel .tostep .btn{flex:none;width:31px;min-width:0;min-height:0;height:35px;padding:0;font-size:16px}
+  body.compact #restPanel .tostep .btn{height:28px}
+  #restPanel .tostep .num.t24{flex:none;width:92px}
   button,.btn,input,select,.tab{touch-action:manipulation}
   .callhd{display:flex;align-items:center;gap:10px;margin:14px 0 6px}
   .crclr{font:inherit;font-size:11px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
@@ -171,8 +171,8 @@
   body.compact .hms .btn.small{margin-bottom:16px !important}
   body.compact .seg button{min-height:36px;font-size:13px}
   body.compact #crCrew{margin-top:0}
-  body.compact #view-crew-rest .label[style*='margin:16px 0 8px']{margin:10px 0 6px !important}
-  body.compact #view-crew-rest .grid2 .label{margin-bottom:4px !important}
+  body.compact #restPanel .label[style*='margin:16px 0 8px']{margin:10px 0 6px !important}
+  body.compact #restPanel .grid2 .label{margin-bottom:4px !important}
   body.compact .grid2{gap:10px}
   body.compact .results{gap:6px}
   body.compact .rp{padding:7px 10px;gap:10px;border-radius:10px}
@@ -406,6 +406,22 @@
 
   /* Calculator */
   .calc{max-width:560px;width:100%;margin:0 auto}
+  .rvhead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+  .rvupd{font-size:11px;color:var(--dim)}
+  .rvf{margin-bottom:10px}
+  .rvf button{font-size:12px;white-space:nowrap;padding:0 4px}
+  .rvcols,.rvrow{display:grid;grid-template-columns:1fr 1fr auto;align-items:center;gap:8px}
+  .rvcols{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;padding:0 12px 6px}
+  .rvlist{display:flex;flex-direction:column;gap:3px}
+  .rvrow{padding:7px 12px;border-radius:8px;border:2px solid transparent;font-size:20px;font-variant-numeric:tabular-nums;cursor:pointer}
+  .rvrow small{font-size:.72em}
+  .rvrow.W{background:rgba(63,185,80,.13)}
+  .rvrow.E{background:rgba(56,139,253,.15)}
+  .rvrow .rvdir{font-size:11px;color:var(--dim);white-space:nowrap}
+  .rvrow.W .rvdir{color:#7ee08a}
+  .rvrow.E .rvdir{color:#79b8ff}
+  .rvrow.sel{border-color:var(--amber);background:rgba(245,165,36,.22);font-weight:600}
+  body.compact .rvrow{padding:5px 10px;font-size:17px}
   .cmode{margin-bottom:10px}
   .cmode button{flex:1}
   #calcKeys .key:disabled{opacity:.3}
@@ -498,7 +514,7 @@
     <button class="tab" role="tab" data-view="ofp">OFP</button>
     <button class="tab" role="tab" data-view="stopwatch">Timer <i class="dot" id="dotSw"></i><i class="dot" id="dotCd"></i></button>
     <button class="tab" role="tab" data-view="calc">Calc</button>
-    <button class="tab" role="tab" data-view="crew-rest">Rest</button>
+    <button class="tab" role="tab" data-view="tools">Tools</button>
     <button class="tab" role="tab" data-view="pa">PA</button>
     <button class="tab" role="tab" data-view="notes">Notes</button>
   </nav>
@@ -555,36 +571,11 @@
   <!-- ============ CALCULATOR ============ -->
   <section class="view" id="view-calc">
     <div class="seg cmode" id="calcMode" role="tablist">
+      <button data-m="rest">Rest</button>
       <button data-m="num" class="on">Calculator</button>
       <button data-m="time">Time</button>
     </div>
-    <div class="card calc">
-      <div class="cdisp">
-        <div class="chist" id="calcHist">&nbsp;</div>
-        <div class="cexpr" id="calcExpr">0</div>
-        <div class="cprev" id="calcPrev">&nbsp;</div>
-      </div>
-      <div class="keys" id="calcKeys">
-        <button class="key fn" data-k="C">C</button>
-        <button class="key fn" data-k="back">⌫</button>
-        <button class="key fn" data-k="%">%</button>
-        <button class="key op" data-k="/">÷</button>
-        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
-        <button class="key op" data-k="*">×</button>
-        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
-        <button class="key op" data-k="-">−</button>
-        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
-        <button class="key op" data-k="+">+</button>
-        <button class="key fn" data-k="neg">±</button>
-        <button class="key" data-k="0">0</button>
-        <button class="key" data-k=".">.</button>
-        <button class="key eq" data-k="=">=</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ CREW REST ============ -->
-  <section class="view" id="view-crew-rest">
+    <div id="restPanel" hidden>
     <div class="card">
       <div class="grid2">
         <div>
@@ -617,6 +608,42 @@
       <div class="ticks" id="crTicks"></div>
       <div class="results" id="crOut" style="margin-top:14px"></div>
       <div class="calls" id="crCall"></div>
+    </div>
+    </div>
+    <div class="card calc" id="calcPanel">
+      <div class="cdisp">
+        <div class="chist" id="calcHist">&nbsp;</div>
+        <div class="cexpr" id="calcExpr">0</div>
+        <div class="cprev" id="calcPrev">&nbsp;</div>
+      </div>
+      <div class="keys" id="calcKeys">
+        <button class="key fn" data-k="C">C</button>
+        <button class="key fn" data-k="back">⌫</button>
+        <button class="key fn" data-k="%">%</button>
+        <button class="key op" data-k="/">÷</button>
+        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+        <button class="key op" data-k="*">×</button>
+        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+        <button class="key op" data-k="-">−</button>
+        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+        <button class="key op" data-k="+">+</button>
+        <button class="key fn" data-k="neg">±</button>
+        <button class="key" data-k="0">0</button>
+        <button class="key" data-k=".">.</button>
+        <button class="key eq" data-k="=">=</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CREW REST ============ -->
+  <section class="view" id="view-tools">
+    <div class="card rvsm">
+      <div class="rvhead"><div class="label">China RVSM conversion</div><span class="rvupd">Updated 19 Sep 2025</span></div>
+      <div class="seg rvf" id="rvFilter">
+        <button data-f="E">Eastbound</button><button data-f="W">Westbound</button><button data-f="H">High</button><button data-f="L">Low</button>
+      </div>
+      <div class="rvcols"><span>Cleared FL · meters</span><span>Select FL · feet</span><span></span></div>
+      <div class="rvlist" id="rvList"></div>
     </div>
   </section>
 
@@ -815,7 +842,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.91';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.92';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -868,9 +895,10 @@
   }
 
   /* ---------- Tabs (hash routing) ---------- */
-  const views = ['ofp','stopwatch','calc','crew-rest','pa','notes'];
+  const views = ['ofp','stopwatch','calc','tools','pa','notes'];
   function show(name){
     if (name === 'countdown') name = 'stopwatch';   // CD tab was merged into Timer
+    if (name === 'crew-rest'){ name = 'calc'; store.set('calcMode', 'rest'); if (typeof window.fdtCalcMode === 'function') window.fdtCalcMode('rest'); }   // Rest now lives in Calc
     if (!views.includes(name)) name = store.get('tab','stopwatch');
     if (!views.includes(name)) name = 'stopwatch';
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view===name));
@@ -1135,20 +1163,45 @@
     document.querySelectorAll('#calcMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
     const dot = document.querySelector('#calcKeys [data-k="."]'), pc = document.querySelector('#calcKeys [data-k="%"]');
     dot.textContent = m === 'time' ? ':' : '.'; pc.disabled = m === 'time';
-    calcShow();
+    $('restPanel').hidden = m !== 'rest'; $('calcPanel').hidden = m === 'rest';
+    if (m === 'rest'){ try{ crCalc(); }catch(e){} } else calcShow();
+    requestAnimationFrame(() => { if (typeof fit === 'function') fit(); });
   };
+  window.fdtCalcMode = setCalcMode;
   document.querySelectorAll('#calcMode button').forEach(b => b.onclick = () => setCalcMode(b.dataset.m));
   const press = k => calcMode === 'time' ? (k === '%' ? null : tPress(k)) : calcPress(k);
   document.querySelectorAll('#calcKeys .key').forEach(b => b.addEventListener('click', () => press(b.dataset.k)));
   // hardware keyboard support (Magic Keyboard etc.) while the Calc tab is open
   document.addEventListener('keydown', e => {
-    if (!$('view-calc').classList.contains('active')) return;
+    if (!$('view-calc').classList.contains('active') || calcMode === 'rest') return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) return;
     const map = {Enter:'=', '=':'=', Backspace:'back', Escape:'C', Delete:'C', 'x':'*', 'X':'*'};
     const k = map[e.key] || (/^[\d.:+\-*/%]$/.test(e.key) ? e.key : null);
     if (k){ e.preventDefault(); press(e.key === ':' ? '.' : k); }
   });
   setCalcMode(calcMode);
+
+  /* ---------- Tools: China RVSM conversion ---------- */
+  (function(){
+    const W = [[13100,43000],[12200,40100],[11600,38100],[11000,36100],[10400,34100],[9800,32100],[9200,30100],[8400,27600],[7800,25600],[7200,23600],[6600,21700],[6000,19700],[5400,17700],[4800,15700],[4200,13800],[3600,11800],[3000,9800],[2400,7900],[1800,5900],[1200,3900],[600,2000]];
+    const E = [[13700,44900],[12500,41100],[11900,39100],[11300,37100],[10700,35100],[10100,33100],[9500,31100],[8900,29100],[8100,26600],[7500,24600],[6900,22600],[6300,20700],[5700,18700],[5100,16700],[4500,14800],[3900,12800],[3300,10800],[2700,8900],[2100,6900],[1500,4900],[900,3000]];
+    const rows = [...W.map(r => [...r, 'W']), ...E.map(r => [...r, 'E'])].sort((a, b) => b[1] - a[1]);
+    // "13 100" with the last two digits small, like the chart
+    const big = n => { const t = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); return `${t.slice(0, -2)}<small>${t.slice(-2)}</small>`; };
+    let f = store.get('rvF', ''), sel = null;
+    const keep = r => f === 'E' ? r[2] === 'E' : f === 'W' ? r[2] === 'W' : f === 'H' ? r[1] > 10000 : f === 'L' ? r[1] < 20000 : true;
+    const draw = () => {
+      document.querySelectorAll('#rvFilter button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
+      $('rvList').innerHTML = rows.filter(keep).map(r => `<div class="rvrow ${r[2]}${sel === r[1] ? ' sel' : ''}" data-ft="${r[1]}"><span>${big(r[0])}</span><span>${big(r[1])}</span><span class="rvdir">${r[2] === 'E' ? 'E 000–179°' : 'W 180–359°'}</span></div>`).join('');
+    };
+    // one filter at a time; tap the chosen one again to show everything
+    $('rvFilter').addEventListener('click', ev => { const b = ev.target.closest('[data-f]'); if (!b) return; f = f === b.dataset.f ? '' : b.dataset.f; store.set('rvF', f); draw(); });
+    // tap a row to highlight it (the previous one un-highlights)
+    $('rvList').addEventListener('click', ev => { const r = ev.target.closest('.rvrow'); if (!r) return;
+      const ft = +r.dataset.ft; sel = sel === ft ? null : ft;
+      $('rvList').querySelectorAll('.rvrow').forEach(x => x.classList.toggle('sel', +x.dataset.ft === sel)); });
+    draw();
+  })();
 
   /* ---------- PA ---------- */
   const PA_DEF = {ms:'None', dep:'SIN', dest:'', land:'', taxi:'', cap1:'', cap2:'', cloud:'', rain:'', other:'', tc:'', scp:''};
