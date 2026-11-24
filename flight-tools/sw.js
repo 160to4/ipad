@@ -1,6 +1,6 @@
 // Flight Deck Tools — offline cache.
 // Bump VERSION whenever any file changes so devices pick up the update.
-const VERSION = 'fdt-v6.92';
+const VERSION = 'fdt-v6.93';
 const FILES = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const FILES = [
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
+  './img/rvsm.jpg',
   './lib/pdf.min.js',
   './lib/pdf.worker.min.js',
   './lib/tess/tesseract.min.js',

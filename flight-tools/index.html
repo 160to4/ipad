@@ -410,7 +410,16 @@
   .rvupd{font-size:11px;color:var(--dim)}
   .rvf{margin-bottom:10px}
   .rvf button{font-size:12px;white-space:nowrap;padding:0 4px}
-  .rvcols,.rvrow{display:grid;grid-template-columns:1fr 1fr auto;align-items:center;gap:8px}
+  .rvcols,.rvrow{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:8px}
+  .rvsm{overflow:visible}
+  .rvlist[hidden],.rvcols[hidden],.rvphoto[hidden]{display:none}
+  .rvstick{position:sticky;top:0;z-index:5;background:var(--panel);margin:0 -4px;padding:4px 4px 0}
+  .rvrow i{font-style:normal;font-size:.6em;color:var(--dim);margin-left:2px}
+  .rvphoto .rvzoom{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .rvphoto .rvzoom .btn{min-width:44px}
+  .rvhint{font-size:11px;color:var(--dim);margin-left:6px}
+  .rvpane{overflow:auto;-webkit-overflow-scrolling:touch;border-radius:10px;background:#fff;max-height:75vh;touch-action:pan-x pan-y}
+  .rvpane img{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   .rvcols{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;padding:0 12px 6px}
   .rvlist{display:flex;flex-direction:column;gap:3px}
   .rvrow{padding:7px 12px;border-radius:8px;border:2px solid transparent;font-size:20px;font-variant-numeric:tabular-nums;cursor:pointer}
@@ -639,11 +648,17 @@
   <section class="view" id="view-tools">
     <div class="card rvsm">
       <div class="rvhead"><div class="label">China RVSM conversion</div><span class="rvupd">Updated 19 Sep 2025</span></div>
-      <div class="seg rvf" id="rvFilter">
-        <button data-f="E">Eastbound</button><button data-f="W">Westbound</button><button data-f="H">High</button><button data-f="L">Low</button>
+      <div class="rvstick">
+        <div class="seg rvf" id="rvFilter">
+          <button data-f="E">E-bound</button><button data-f="W">W-bound</button><button data-f="H">High</button><button data-f="L">Low</button><button data-f="P">Photo</button>
+        </div>
+        <div class="rvcols" id="rvCols"><span>Cleared FL</span><span>Select FL</span></div>
       </div>
-      <div class="rvcols"><span>Cleared FL · meters</span><span>Select FL · feet</span><span></span></div>
       <div class="rvlist" id="rvList"></div>
+      <div class="rvphoto" id="rvPhoto" hidden>
+        <div class="rvzoom"><button class="btn small" data-z="-1">−</button><button class="btn small" data-z="0">Fit</button><button class="btn small" data-z="1">+</button><span class="rvhint">Pinch or double-tap to zoom</span></div>
+        <div class="rvpane" id="rvPane"><img id="rvImg" src="img/rvsm.jpg" alt="China RVSM conversion table" draggable="false"></div>
+      </div>
     </div>
   </section>
 
@@ -842,7 +857,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.92';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.93';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1192,7 +1207,9 @@
     const keep = r => f === 'E' ? r[2] === 'E' : f === 'W' ? r[2] === 'W' : f === 'H' ? r[1] > 10000 : f === 'L' ? r[1] < 20000 : true;
     const draw = () => {
       document.querySelectorAll('#rvFilter button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
-      $('rvList').innerHTML = rows.filter(keep).map(r => `<div class="rvrow ${r[2]}${sel === r[1] ? ' sel' : ''}" data-ft="${r[1]}"><span>${big(r[0])}</span><span>${big(r[1])}</span><span class="rvdir">${r[2] === 'E' ? 'E 000–179°' : 'W 180–359°'}</span></div>`).join('');
+      const photo = f === 'P'; $('rvPhoto').hidden = !photo; $('rvList').hidden = photo; $('rvCols').hidden = photo;
+      if (photo){ requestAnimationFrame(() => zoom(zs)); return; }
+      $('rvList').innerHTML = rows.filter(keep).map(r => `<div class="rvrow ${r[2]}${sel === r[1] ? ' sel' : ''}" data-ft="${r[1]}"><span>${big(r[0])} <i>m</i></span><span>${big(r[1])} <i>ft</i></span></div>`).join('');
     };
     // one filter at a time; tap the chosen one again to show everything
     $('rvFilter').addEventListener('click', ev => { const b = ev.target.closest('[data-f]'); if (!b) return; f = f === b.dataset.f ? '' : b.dataset.f; store.set('rvF', f); draw(); });
@@ -1200,6 +1217,33 @@
     $('rvList').addEventListener('click', ev => { const r = ev.target.closest('.rvrow'); if (!r) return;
       const ft = +r.dataset.ft; sel = sel === ft ? null : ft;
       $('rvList').querySelectorAll('.rvrow').forEach(x => x.classList.toggle('sel', +x.dataset.ft === sel)); });
+    // Photo: pinch / double-tap / buttons to zoom (page zoom is off in this app, so it's done here)
+    const pane = $('rvPane'), img = $('rvImg');
+    let zs = 1;
+    function zoom(z, cx, cy){
+      const old = zs; zs = Math.max(1, Math.min(5, z));
+      const w = pane.clientWidth; if (!w) return;
+      const px = cx == null ? pane.clientWidth / 2 : cx, py = cy == null ? pane.clientHeight / 2 : cy;
+      const ax = (pane.scrollLeft + px) / old, ay = (pane.scrollTop + py) / old;
+      img.style.width = (w * zs) + 'px';
+      pane.scrollLeft = ax * zs - px; pane.scrollTop = ay * zs - py;
+    }
+    document.querySelector('.rvzoom').addEventListener('click', ev => { const b = ev.target.closest('[data-z]'); if (!b) return; const k = +b.dataset.z; zoom(k ? zs * (k > 0 ? 1.5 : 1 / 1.5) : 1); });
+    let pinch = null, lastTap = 0;
+    const pt = (t, r) => [t.clientX - r.left, t.clientY - r.top];
+    pane.addEventListener('touchstart', ev => {
+      if (ev.touches.length === 2){ const r = pane.getBoundingClientRect(), [a, b] = [pt(ev.touches[0], r), pt(ev.touches[1], r)];
+        pinch = {d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: zs, c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]}; ev.preventDefault(); }
+      else if (ev.touches.length === 1){ const now = Date.now(); if (now - lastTap < 300){ const r = pane.getBoundingClientRect(), [x, y] = pt(ev.touches[0], r); zoom(zs > 1.2 ? 1 : 2.5, x, y); ev.preventDefault(); } lastTap = now; }
+    }, {passive: false});
+    pane.addEventListener('touchmove', ev => {
+      if (!pinch || ev.touches.length !== 2) return; ev.preventDefault();
+      const r = pane.getBoundingClientRect(), [a, b] = [pt(ev.touches[0], r), pt(ev.touches[1], r)];
+      zoom(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, pinch.c[0], pinch.c[1]);
+    }, {passive: false});
+    pane.addEventListener('touchend', ev => { if (ev.touches.length < 2) pinch = null; });
+    ['gesturestart', 'gesturechange'].forEach(t => pane.addEventListener(t, ev => ev.preventDefault()));   // stop Safari's own page zoom
+    window.addEventListener('resize', () => { if (f === 'P') zoom(zs); });
     draw();
   })();
 
