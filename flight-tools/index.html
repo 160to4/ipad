@@ -406,6 +406,9 @@
 
   /* Calculator */
   .calc{max-width:560px;width:100%;margin:0 auto}
+  .cmode{margin-bottom:10px}
+  .cmode button{flex:1}
+  #calcKeys .key:disabled{opacity:.3}
   .cdisp{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;text-align:right;margin-bottom:12px}
   .chist{font-size:15px;color:var(--dim);min-height:20px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cexpr{font-size:clamp(34px,6vw,48px);font-variant-numeric:tabular-nums;font-weight:300;word-break:break-all;line-height:1.15}
@@ -551,6 +554,10 @@
 
   <!-- ============ CALCULATOR ============ -->
   <section class="view" id="view-calc">
+    <div class="seg cmode" id="calcMode" role="tablist">
+      <button data-m="num" class="on">Calculator</button>
+      <button data-m="time">Time</button>
+    </div>
     <div class="card calc">
       <div class="cdisp">
         <div class="chist" id="calcHist">&nbsp;</div>
@@ -808,7 +815,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.90';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.91';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1051,7 +1058,7 @@
     }
     calcShow();
   }
-  function calcShow(){
+  let calcShow = function(){
     const e = $('calcExpr');
     e.classList.toggle('err', calc.err);
     e.textContent = calc.err ? 'Can’t divide by 0' : exprText(calc.t);
@@ -1061,16 +1068,87 @@
     $('calcPrev').textContent = (r !== null && isFinite(r) && calc.t.length > 2) ? '= ' + fmtNum(numStr(r)) : ' ';
     document.querySelectorAll('#calcKeys .op').forEach(b => b.classList.toggle('on', calc.t[calc.t.length-1] === b.dataset.k));
   }
-  document.querySelectorAll('#calcKeys .key').forEach(b => b.addEventListener('click', () => calcPress(b.dataset.k)));
+  // ---- Time calculator: same keypad. Digits fill HH:MM from the right (1,3,0 → 01:30); "." becomes ":" to type hours then minutes.
+  //      + and − work on times; × and ÷ take a plain number (e.g. 07:30 ÷ 3). Hours can go past 24.
+  const tc = {t: [], hist: '', done: false, err: false};
+  let calcMode = store.get('calcMode', 'num');
+  const tMin = raw => { const neg = raw.startsWith('-'), r = neg ? raw.slice(1) : raw; let m;
+    if (r.includes(':')){ const [h, mm] = r.split(':'); m = (+h || 0) * 60 + (+mm || 0); }
+    else { const d = r || '0'; m = (+d.slice(0, -2) || 0) * 60 + (+d.slice(-2) || 0); }
+    return neg ? -m : m; };
+  const fmtT = m => { const neg = m < 0; m = Math.abs(Math.round(m)); return (neg ? '−' : '') + pad2(Math.floor(m / 60)) + ':' + pad2(m % 60); };
+  const showRaw = (raw, scalar) => { if (scalar) return fmtNum(raw); const neg = raw.startsWith('-'), r = neg ? raw.slice(1) : raw;
+    let out; if (r.includes(':')){ const [h, mm] = r.split(':'); out = pad2(+h || 0) + ':' + mm; }
+    else { const d = r.padStart(3, '0'); out = pad2(+d.slice(0, -2)) + ':' + d.slice(-2); }
+    return (neg ? '−' : '') + out; };
+  const isScalar = (tk, i) => i > 0 && (tk[i-1] === '*' || tk[i-1] === '/');
+  const tEval = tk => { tk = tk.slice(); while (tk.length && isOp(tk[tk.length-1])) tk.pop(); if (!tk.length) return null;
+    const r = evalTokens(tk.map((x, i) => isOp(x) ? x : String(isScalar(tk, i) ? parseFloat(x) || 0 : tMin(x))));
+    return r === null || !isFinite(r) ? r : Math.round(r); };
+  const tExpr = tk => tk.map((x, i) => isOp(x) ? ' ' + OPSYM[x] + ' ' : showRaw(x, isScalar(tk, i))).join('') || '00:00';
+  function tPress(k){
+    const t = tc.t, last = t[t.length-1], i = t.length - 1, scalarNext = last !== undefined && (last === '*' || last === '/');
+    if (tc.err && k !== 'C'){ tc.t = []; tc.err = false; }
+    if (/^\d$/.test(k)){
+      if (tc.done){ tc.t = [k]; tc.done = false; }
+      else if (last !== undefined && !isOp(last)){
+        const sc = isScalar(t, i), body = last.replace(/^-/, '');
+        const lim = sc ? 6 : body.includes(':') ? (body.split(':')[1].length < 2 ? 99 : 0) : 6;
+        if (lim && body.replace(/[^\d]/g, '').length < 8) t[i] = last + k;
+      } else t.push(k);
+    } else if (k === '.'){
+      if (tc.done){ tc.t = ['0:']; tc.done = false; }
+      else if (last === undefined || isOp(last)) t.push(scalarNext ? '0.' : '0:');
+      else if (isScalar(t, i)){ if (!last.includes('.')) t[i] = last + '.'; }
+      else if (!last.includes(':')) t[i] = last + ':';
+    } else if (isOp(k)){
+      tc.done = false; if (!t.length) t.push('0');
+      if (isOp(t[t.length-1])) t[t.length-1] = k; else t.push(k);
+    } else if (k === '='){
+      if (!t.length || tc.done) return calcShow();
+      const r = tEval(t); if (r === null) return calcShow();
+      tc.hist = tExpr(t.filter((x, j, a) => !(j === a.length-1 && isOp(x)))) + ' =';
+      if (!isFinite(r)){ tc.err = true; tc.t = []; }
+      else { const a = Math.abs(r); tc.t = [(r < 0 ? '-' : '') + Math.floor(a / 60) + ':' + pad2(a % 60)]; tc.done = true; }
+    } else if (k === 'C'){ if (!t.length && !tc.err) tc.hist = ''; tc.t = []; tc.done = false; tc.err = false; }
+    else if (k === 'back'){
+      if (tc.done) tc.done = false;
+      if (last !== undefined){ if (isOp(last) || last.replace(/^-/, '').length <= 1) t.pop(); else t[i] = last.slice(0, -1); }
+    } else if (k === 'neg'){
+      if (last === undefined || isOp(last)) return calcShow();
+      t[i] = last.startsWith('-') ? last.slice(1) : '-' + last; tc.done = false;
+    }
+    calcShow();
+  }
+  const calcShowNum = calcShow;
+  calcShow = function(){
+    if (calcMode !== 'time') return calcShowNum();
+    const e = $('calcExpr'); e.classList.toggle('err', tc.err);
+    e.textContent = tc.err ? 'Can’t divide by 0' : tExpr(tc.t);
+    $('calcHist').textContent = tc.hist || ' ';
+    const ops = tc.t.filter(isOp).length, r = (!tc.done && ops) ? tEval(tc.t) : null;
+    $('calcPrev').textContent = (r !== null && isFinite(r) && tc.t.length > 2) ? '= ' + fmtT(r) : ' ';
+    document.querySelectorAll('#calcKeys .op').forEach(b => b.classList.toggle('on', tc.t[tc.t.length-1] === b.dataset.k));
+  };
+  const setCalcMode = m => {
+    calcMode = m; store.set('calcMode', m);
+    document.querySelectorAll('#calcMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    const dot = document.querySelector('#calcKeys [data-k="."]'), pc = document.querySelector('#calcKeys [data-k="%"]');
+    dot.textContent = m === 'time' ? ':' : '.'; pc.disabled = m === 'time';
+    calcShow();
+  };
+  document.querySelectorAll('#calcMode button').forEach(b => b.onclick = () => setCalcMode(b.dataset.m));
+  const press = k => calcMode === 'time' ? (k === '%' ? null : tPress(k)) : calcPress(k);
+  document.querySelectorAll('#calcKeys .key').forEach(b => b.addEventListener('click', () => press(b.dataset.k)));
   // hardware keyboard support (Magic Keyboard etc.) while the Calc tab is open
   document.addEventListener('keydown', e => {
     if (!$('view-calc').classList.contains('active')) return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) return;
     const map = {Enter:'=', '=':'=', Backspace:'back', Escape:'C', Delete:'C', 'x':'*', 'X':'*'};
-    const k = map[e.key] || (/^[\d.+\-*/%]$/.test(e.key) ? e.key : null);
-    if (k){ e.preventDefault(); calcPress(k); }
+    const k = map[e.key] || (/^[\d.:+\-*/%]$/.test(e.key) ? e.key : null);
+    if (k){ e.preventDefault(); press(e.key === ':' ? '.' : k); }
   });
-  calcShow();
+  setCalcMode(calcMode);
 
   /* ---------- PA ---------- */
   const PA_DEF = {ms:'None', dep:'SIN', dest:'', land:'', taxi:'', cap1:'', cap2:'', cloud:'', rain:'', other:'', tc:'', scp:''};
