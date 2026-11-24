@@ -23,12 +23,12 @@
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
     -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
-  body{display:flex;flex-direction:column;min-height:100dvh}
+  body{display:flex;flex-direction:column;min-height:100dvh;height:auto}
   button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulation}
   input,select{font:inherit;color:var(--text)}
 
   /* Tabs */
-  header{position:sticky;top:0;z-index:5;background:rgba(13,17,23,.92);backdrop-filter:blur(10px);
+  header{position:sticky;top:0;z-index:20;background:rgba(13,17,23,.92);backdrop-filter:blur(10px);
     -webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
     padding:calc(10px + env(safe-area-inset-top)) 16px 10px}
   .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;max-width:720px;margin:0 auto}
@@ -139,6 +139,7 @@
       max-width:none;flex:1;min-height:0}
     section.view{grid-column:1;grid-row:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     .card.pad{grid-column:2;grid-row:1;min-height:0}
+    .rvstick{top:0}
     .canvaswrap{min-height:0}
     #ver{position:fixed;right:calc(14px + var(--edge-r));bottom:3px;padding:0 !important;pointer-events:none;z-index:4}
     body.nopad main{grid-template-columns:minmax(0,1fr)}
@@ -409,12 +410,28 @@
   .rvhead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
   .rvupd{font-size:11px;color:var(--dim)}
   .rvf{margin-bottom:10px}
-  .rvf button{font-size:12px;white-space:nowrap;padding:0 4px}
-  .rvcols,.rvrow{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:8px}
+  .rvf button{font-size:12px;white-space:nowrap;padding:0 2px}
+  .rvcols,.rvrow{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:8px;text-align:center}
   .rvsm{overflow:visible}
   .rvlist[hidden],.rvcols[hidden],.rvphoto[hidden]{display:none}
-  .rvstick{position:sticky;top:0;z-index:5;background:var(--panel);margin:0 -4px;padding:4px 4px 0}
+  .rvstick{position:sticky;top:var(--hdrh,0px);z-index:5;background:var(--panel);margin:0 -4px;padding:4px 4px 0}
   .rvrow i{font-style:normal;font-size:.6em;color:var(--dim);margin-left:2px}
+  .rvmod .mdisp{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:6px 0 10px}
+  .mrow{display:flex;align-items:baseline;justify-content:space-between;padding:4px 8px;border-radius:8px}
+  .mrow.W{background:rgba(63,185,80,.13)} .mrow.E{background:rgba(56,139,253,.15)}
+  .mlab{font-size:12px;color:var(--dim);font-weight:600;letter-spacing:.06em}
+  .mval{font-size:34px;font-variant-numeric:tabular-nums;font-weight:400}
+  .mval small{font-size:.7em} .mval i{font-style:normal;font-size:.45em;color:var(--dim);margin-left:4px}
+  .mval .dimtxt{color:var(--dim)}
+  .mhint{font-size:12px;color:var(--dim);text-align:right;min-height:16px;margin-top:4px}
+  .mkeys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mkeys button{min-height:56px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:24px;font-variant-numeric:tabular-nums}
+  .mkeys button small{font-size:.6em;color:var(--amber)}
+  .mkeys button.fn{color:var(--dim);font-size:20px}
+  .mkeys button:disabled{opacity:.2}
+  body.compact .mkeys button{min-height:44px;font-size:20px}
+  body.compact .mval{font-size:28px}
+  .rvmod[hidden]{display:none}
   .rvphoto .rvzoom{display:flex;align-items:center;gap:6px;margin-bottom:8px}
   .rvphoto .rvzoom .btn{min-width:44px}
   .rvhint{font-size:11px;color:var(--dim);margin-left:6px}
@@ -650,11 +667,22 @@
       <div class="rvhead"><div class="label">China RVSM conversion</div><span class="rvupd">Updated 19 Sep 2025</span></div>
       <div class="rvstick">
         <div class="seg rvf" id="rvFilter">
-          <button data-f="E">E-bound</button><button data-f="W">W-bound</button><button data-f="H">High</button><button data-f="L">Low</button><button data-f="P">Photo</button>
+          <button data-f="E">E-bound</button><button data-f="W">W-bound</button><button data-f="H">High</button><button data-f="L">Low</button><button data-f="M">Modern</button><button data-f="P">Photo</button>
         </div>
         <div class="rvcols" id="rvCols"><span>Cleared FL</span><span>Select FL</span></div>
       </div>
       <div class="rvlist" id="rvList"></div>
+      <div class="rvmod" id="rvMod" hidden>
+        <div class="mdisp"><div class="mrow"><span class="mlab">M</span><span class="mval" id="mM">—</span></div>
+          <div class="mrow" id="mFtRow"><span class="mlab">FT</span><span class="mval" id="mFt">—</span></div>
+          <div class="mhint" id="mHint">&nbsp;</div></div>
+        <div class="mkeys" id="mKeys">
+          <button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button>
+          <button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button>
+          <button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button>
+          <button data-d="C" class="fn">C</button><button data-d="0">0</button><button data-d="back" class="fn">⌫</button>
+        </div>
+      </div>
       <div class="rvphoto" id="rvPhoto" hidden>
         <div class="rvzoom"><button class="btn small" data-z="-1">−</button><button class="btn small" data-z="0">Fit</button><button class="btn small" data-z="1">+</button><span class="rvhint">Pinch or double-tap to zoom</span></div>
         <div class="rvpane" id="rvPane"><img id="rvImg" src="img/rvsm.jpg" alt="China RVSM conversion table" draggable="false"></div>
@@ -857,7 +885,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.93';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.94';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1196,6 +1224,10 @@
   });
   setCalcMode(calcMode);
 
+  // header height → sticky bars below it know where to stop
+  { const h = document.querySelector('header'), set = () => document.documentElement.style.setProperty('--hdrh', h.offsetHeight + 'px');
+    set(); window.addEventListener('resize', set); if (window.ResizeObserver) new ResizeObserver(set).observe(h); }
+
   /* ---------- Tools: China RVSM conversion ---------- */
   (function(){
     const W = [[13100,43000],[12200,40100],[11600,38100],[11000,36100],[10400,34100],[9800,32100],[9200,30100],[8400,27600],[7800,25600],[7200,23600],[6600,21700],[6000,19700],[5400,17700],[4800,15700],[4200,13800],[3600,11800],[3000,9800],[2400,7900],[1800,5900],[1200,3900],[600,2000]];
@@ -1207,7 +1239,8 @@
     const keep = r => f === 'E' ? r[2] === 'E' : f === 'W' ? r[2] === 'W' : f === 'H' ? r[1] > 10000 : f === 'L' ? r[1] < 20000 : true;
     const draw = () => {
       document.querySelectorAll('#rvFilter button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
-      const photo = f === 'P'; $('rvPhoto').hidden = !photo; $('rvList').hidden = photo; $('rvCols').hidden = photo;
+      const photo = f === 'P', mod = f === 'M'; $('rvPhoto').hidden = !photo; $('rvMod').hidden = !mod; $('rvList').hidden = photo || mod; $('rvCols').hidden = photo || mod;
+      if (mod) mDraw();
       if (photo){ requestAnimationFrame(() => zoom(zs)); return; }
       $('rvList').innerHTML = rows.filter(keep).map(r => `<div class="rvrow ${r[2]}${sel === r[1] ? ' sel' : ''}" data-ft="${r[1]}"><span>${big(r[0])} <i>m</i></span><span>${big(r[1])} <i>ft</i></span></div>`).join('');
     };
@@ -1217,6 +1250,26 @@
     $('rvList').addEventListener('click', ev => { const r = ev.target.closest('.rvrow'); if (!r) return;
       const ft = +r.dataset.ft; sel = sel === ft ? null : ft;
       $('rvList').querySelectorAll('.rvrow').forEach(x => x.classList.toggle('sel', +x.dataset.ft === sel)); });
+    // Modern: type metres by table lookup. Each table level in hundreds ("6" = 600, "69" = 6 900, "137" = 13 700);
+    // only digits that lead to a real table level are enabled, shown as the hundreds they complete (e.g. 9 → 900).
+    const sig = rows.map(r => ({k: String(r[0] / 100), m: r[0], ft: r[1], d: r[2]}));
+    let mp = '';
+    const grp = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    function mDraw(){
+      const hit = sig.find(x => x.k === mp), next = new Set(sig.filter(x => x.k.length > mp.length && x.k.startsWith(mp)).map(x => x.k[mp.length]));
+      $('mM').innerHTML = hit ? `${big(hit.m)} <i>m</i>` : mp ? `${grp(mp)}<small class="dimtxt">··</small> <i>m</i>` : '<span class="dimtxt">—</span>';
+      $('mFt').innerHTML = hit ? `${big(hit.ft)} <i>ft</i>` : '<span class="dimtxt">—</span>';
+      $('mFtRow').className = 'mrow' + (hit ? ' ' + hit.d : '');
+      const opts = sig.filter(x => x.k.length > mp.length && x.k.startsWith(mp) && mp).map(x => grp(x.m));
+      $('mHint').textContent = hit ? (hit.d === 'E' ? 'E-bound' : 'W-bound') : opts.length ? opts.join(' · ') : ' ';
+      document.querySelectorAll('#mKeys [data-d]').forEach(b => {
+        const d = b.dataset.d; if (d === 'C' || d === 'back'){ b.disabled = !mp; return; }
+        b.disabled = !next.has(d); b.innerHTML = mp && !b.disabled && sig.some(x => x.k === mp + d) ? `${d}<small>00</small>` : d;   // "00" only when that key lands on a table level
+      });
+    }
+    $('mKeys').addEventListener('click', ev => { const b = ev.target.closest('[data-d]'); if (!b || b.disabled) return;
+      const d = b.dataset.d; mp = d === 'C' ? '' : d === 'back' ? mp.slice(0, -1) : mp + d; mDraw(); });
+
     // Photo: pinch / double-tap / buttons to zoom (page zoom is off in this app, so it's done here)
     const pane = $('rvPane'), img = $('rvImg');
     let zs = 1;
