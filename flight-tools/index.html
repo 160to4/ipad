@@ -887,7 +887,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.98';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v6.99';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2116,12 +2116,13 @@
   }
   function ocParse(t){
     const T = t.replace(/[|]/g, '/').replace(/\s+/g, ' ');
-    const fixM = m => m.replace(/\s/g, '').replace(/^M[O0o]?[.,]?/i, 'M0.');
+    const fixM = m => m.replace(/\s/g, '').replace(/^M[O0o]*[.,]?/i, 'M0.');
     // second part is a Mach number (M0.82) or words such as "CRZ Mach" / "ECON"
-    const a = T.match(/TGT\s*SPD[^0-9]{0,40}?(\d{3})\s*\/\s*(M\s*[0Oo]?\s*[.,]\s*\d{2,3}|[A-Z]{2,5}(?:\s+[A-Za-z]{2,6})?)/i);
+    // a stray bullet/mark can sit before the second part when it wraps onto the next line ("314 / o M0.82")
+    const a = T.match(/TGT\s*SPD[^0-9]{0,40}?(\d{3})\s*\/\s*(?:\S{1,2}\s+)??(M\s*[0Oo]{0,2}\s*[.,]\s*\d{2,3}|[A-Z]{2,5}(?:\s+[A-Za-z]{2,6})?)/i);
     const b = T.match(/SPD\s*RESTR[^0-9]{0,12}?(\d{3})\s*\/\s*F\s*L\s*(\d{2,3})/i);
     const v = T.match(/OFP\s*version\s*number\s*:?\s*(OFP\s*[\w\/]+)/i);
-    const second = a ? (/^M\s*[0Oo]?\s*[.,]/i.test(a[2]) ? fixM(a[2]) : a[2].replace(/\s+(Enter|Switch|In|Speeds)$/i, '').replace(/\bmach\b/i, 'Mach')) : '';
+    const second = a ? (/^M\s*[0Oo]{0,2}\s*[.,]/i.test(a[2]) ? fixM(a[2]) : a[2].replace(/\s+(Enter|Switch|In|Speeds)$/i, '').replace(/\bmach\b/i, 'Mach')) : '';
     return { tgt: a ? `${a[1]} / ${second}` : null, restr: b ? `${b[1]} / FL${b[2]}` : null, ofpv: v ? v[1].replace(/\s/g, '') : null };
   }
   $('ofpOut').addEventListener('input', ev => {
