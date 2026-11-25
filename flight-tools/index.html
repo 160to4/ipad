@@ -23,7 +23,9 @@
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
     -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
-  body{display:flex;flex-direction:column;min-height:100dvh;height:auto}
+  /* the page itself never scrolls (iPad rubber-banding moved the bars); only the middle part does, so the tab bar and app bar stay put */
+  html{overflow:hidden}
+  body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
   button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulation}
   input,select{font:inherit;color:var(--text)}
 
@@ -41,7 +43,7 @@
   @keyframes pulse{50%{opacity:.35}}
 
   header{padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
-  main{flex:1;display:flex;flex-direction:column;gap:14px;
+  main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column;gap:14px;
     padding:16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));max-width:980px;width:100%;margin:0 auto}
   section.view{display:none;flex-direction:column;gap:14px;flex:0 0 auto}
   section.view.active{display:flex}
@@ -136,7 +138,7 @@
     body{height:100dvh;overflow:hidden}
     .padbtn{display:block}
     main{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);grid-template-rows:minmax(0,1fr);
-      max-width:none;flex:1;min-height:0}
+      max-width:none;flex:1;min-height:0;overflow:hidden}
     section.view{grid-column:1;grid-row:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     .card.pad{grid-column:2;grid-row:1;min-height:0}
     .rvstick{top:0}
@@ -414,7 +416,7 @@
   .rvcols,.rvrow{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:8px;text-align:center}
   .rvsm{overflow:visible}
   .rvlist[hidden],.rvcols[hidden],.rvphoto[hidden]{display:none}
-  .rvstick{position:sticky;top:var(--hdrh,0px);z-index:5;background:var(--panel);margin:0 -4px;padding:4px 4px 0}
+  .rvstick{position:sticky;top:-16px;z-index:5;background:var(--panel);margin:0 -4px;padding:4px 4px 0}
   .rvrow i{font-style:normal;font-size:.6em;color:var(--dim);margin-left:2px}
   .rvmod .mdisp{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:6px 0 10px}
   .mrow{display:flex;align-items:baseline;justify-content:space-between;padding:4px 8px;border-radius:8px}
@@ -887,7 +889,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v6.99';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.00';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1248,7 +1250,7 @@
       $('rvList').innerHTML = rows.filter(keep).map(r => `<div class="rvrow ${r[2]}${sel === r[1] ? ' sel' : ''}" data-ft="${r[1]}"><span>${big(r[0])} <i>m</i></span><span>${big(r[1])} <i>ft</i></span></div>`).join('');
     };
     // one filter at a time; tap the chosen one again to show everything
-    const toTop = () => { window.scrollTo(0, 0); $('view-tools').scrollTop = 0; };
+    const toTop = () => { window.scrollTo(0, 0); document.querySelector('main').scrollTop = 0; $('view-tools').scrollTop = 0; };
     $('rvFilter').addEventListener('click', ev => { const b = ev.target.closest('[data-f]'); if (!b) return;
       if (b.dataset.f === 'M' && f !== 'M'){ f = 'M'; store.set('rvF', f); draw(); toTop(); return; }   // into Modern: open at the top; tapping it again shows the full list
       f = f === b.dataset.f ? '' : b.dataset.f; store.set('rvF', f); draw(); });
