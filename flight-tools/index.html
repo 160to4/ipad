@@ -132,6 +132,8 @@
   .padbtn{display:none;flex:0 0 auto;width:44px;height:44px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:18px}
   .padbtn.on{color:var(--amber);border-color:var(--amber)}
   section.view{container-type:inline-size}
+  main > *{flex-shrink:0}
+  main > .card.pad{flex:1 0 auto;min-height:320px}   /* main scrolls now; don't let the scratchpad get squashed (it hid the Update button) */
 
   /* ---------- Landscape: tools on the left, scratchpad on the right ---------- */
   @media (orientation: landscape){
@@ -889,7 +891,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.00';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.01';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
