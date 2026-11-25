@@ -409,7 +409,9 @@
   .tla b{white-space:nowrap} .tla .dimtxt{color:var(--dim)}
   .tlr.past{display:none}
   .tladjg{color:var(--green)}
-  .tlfir{color:var(--dim);font-size:.7em;margin-left:6px;white-space:nowrap}
+  .tlfir{margin-left:5px;white-space:nowrap}
+  .tlh .tlfir{font-size:20px;font-weight:600;margin-left:0}
+  .tlnext .tlh .tlfir{color:var(--mag)}
   .tlr.past.x{color:var(--dim)}
   .tlr.now{background:rgba(245,165,36,.18);font-weight:600}
   .tlr.next{background:rgba(88,166,255,.12)}
@@ -939,7 +941,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.07';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.08';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2210,12 +2212,12 @@
   function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
-    return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<small class="tlfir">${ofpEsc(tlFirName(p[0]))}</small>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
+    return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
       <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('WIND', tlWind(p))}</div></div>`;
   }
   const tlAdj = e => ((ofp.tlAdj || {})[e.id]) || 0;
-  const tlFir = (n, firN) => { const c = n.replace(/^-/, ''), f = firN && firN[c]; return f ? `${f} (${c})` : c; };
+  const tlFir = (n, firN) => { const c = n.replace(/^-/, ''), f = firN && firN[c]; return f ? `${n} (${f})` : n; };   // -UBBA (Baku)
   const tlAdjC = a => a > 0 ? 'tladjt' : a < 0 ? 'tladjg' : '';   // later = yellow, earlier = green
   const tlRep = e => new Set(((ofp.tlRepP || {})[e.id]) || []);
   const tlFirName = n => { const e = ofp.recent.find(r => r.id === ofp.cur), f = e && e.data.firN; return f ? f[n.replace(/^-/, '')] || '' : ''; };
@@ -2237,7 +2239,7 @@
         <button class="btn small" id="tlAdP" aria-label="Waypoint times 1 minute later">+</button></div>
       <div class="tlal" id="tlAl"></div>
       <div id="tlCards"></div>
-      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr${tlRep(e).has(i) ? ' rep' : ''}" data-i="${i}"><span>${ofpEsc(p[0])}${p[0].startsWith('-') && tlFirName(p[0]) ? `<small class="tlfir">${ofpEsc(tlFirName(p[0]))}</small>` : ''}<small class="tlrep">(report to ATC)</small></span><span class="${tlAdjC(adj)}">${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
+      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr${tlRep(e).has(i) ? ' rep' : ''}" data-i="${i}"><span>${ofpEsc(p[0])}${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}<small class="tlrep">(report to ATC)</small></span><span class="${tlAdjC(adj)}">${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
     const setTo = ms => { ofp.tlTo = ofp.tlTo || {}; ofp.tlTo[e.id] = ms; store.set('ofp', ofp); $('tlTo').value = tlZ(ms); tlTick(true); };
     // ADJ: shifts every waypoint time (e.g. running late in flight) — NINOP 06:53 → 06:54 with one +
     const adShow = () => { const a = tlAdj(e); $('tlAd').textContent = (a < 0 ? '−' : '+') + tlHM(Math.abs(a)); };
