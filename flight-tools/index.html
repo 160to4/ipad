@@ -384,12 +384,19 @@
   .tlx{margin-left:auto;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
   .tlg{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-variant-numeric:tabular-nums}
   .tlv{font-size:19px;white-space:nowrap}
+  .tlg3{grid-template-columns:1fr 1fr 1fr;margin-bottom:6px}
   body.compact .tlv{font-size:17px}
   .tlg small,.tllist small{font-size:.75em;color:var(--dim)}
   .tlg small.hw,.tllist small.hw{color:#ff9b8a} .tlg small.tw,.tllist small.tw{color:#7ee08a}
   .tllist{margin-top:6px;border-top:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
   .tlr{display:grid;grid-template-columns:1.3fr .9fr .9fr .6fr 1.6fr;gap:6px;padding:5px 6px;border-bottom:1px solid var(--line)}
   .tlv small.turn{color:var(--amber);font-size:.7em;font-weight:600}
+  .msahi{color:var(--red);font-weight:700}
+  .vwsy{color:var(--amber);font-weight:700} .vwsr{color:var(--red);font-weight:700}
+  .tlal{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:8px}
+  .tla{display:flex;gap:10px;align-items:baseline;padding:3px 0;font-size:14px;font-variant-numeric:tabular-nums}
+  .tla .tlat{min-width:48px;color:var(--dim);font-size:12px}
+  .tla b{white-space:nowrap} .tla .dimtxt{color:var(--dim)}
   .tlr.past{color:var(--dim)}
   .tlr.now{background:rgba(245,165,36,.18);font-weight:600}
   .tlr.next{background:rgba(88,166,255,.12)}
@@ -919,7 +926,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.03';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.04';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1756,7 +1763,7 @@
       let pend = null;
       (o._navL || []).forEach(({l}) => {
         const t = l.trim(), a = t.match(l1);
-        if (a){ const tas = t.match(/\.{5}\s+(\d{3})\b/); pend = {n: a[1], t: +a[2] * 60 + +a[3], tas: tas ? +tas[1] : null}; return; }
+        if (a){ const tv = t.match(/\.{5}\s+(\d{3})(?:\s+(\d{3})(?=\s+\d\d\.\d))?/); pend = {n: a[1], t: +a[2] * 60 + +a[3], tas: tv ? +tv[1] : null, vws: tv && tv[2] ? +tv[2] : null}; return; }
         const c = pend && t.match(co); if (!c) return;
         const k = c[3].replace(/\*/g, ' ').split(/\s+/).filter(Boolean); let i = 0;
         const r = {msa: null, dis: null, fl: '', trk: null, pdn: null, wd: null, ws: null, gs: null};
@@ -1768,10 +1775,10 @@
         if (/^[PM]\d\d$/.test(k[i])){ r.pdn = (k[i][0] === 'M' ? -1 : 1) * +k[i].slice(1); i++; }
         if (/^\d{5,6}$/.test(k[i])){ r.wd = +k[i].slice(0, 3); r.ws = +k[i].slice(3); i++; }
         if (/^\d{3}$/.test(k[i])) r.gs = +k[i++];
-        nav.push([pend.n, pend.t, r.fl, r.trk, r.pdn, r.wd, r.ws, r.gs, r.dis, pend.tas]);
+        nav.push([pend.n, pend.t, r.fl, r.trk, r.pdn, r.wd, r.ws, r.gs, r.dis, pend.tas, r.msa, pend.vws]);
         pend = null;
       });
-      if (nav.length >= 3){ o.nav = nav; o.navV = 2; }   // [name, ACTM min, FL|CLB|DES, IMT, PDN, wind dir, wind kt, GS, dist, TAS]
+      if (nav.length >= 3){ o.nav = nav; o.navV = 3; }   // [name, ACTM min, FL|CLB|DES, IMT, PDN, wind dir, wind kt, GS, dist, TAS, MSA, VWS]
     }
     if (o.altnFuel == null) o.altnFuel = after(/ALTN\s+FUEL/, /\b(\d{4,6})\b/);
     if (o.altnHold == null) o.altnHold = after(/ALTN\s+HOLD/, /\b(\d{4,6})\b/);
@@ -2154,28 +2161,41 @@
     return `${pad2(p[5]).padStart(3, '0')}/${p[6]} <small class="${c > 0 ? 'hw' : 'tw'}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${c ? Math.abs(c) : '0'}</small>`;
   }
   const tlFL = p => p[2] || '—';
-  const tlTrk = p => p && p[3] != null ? String(p[3]).padStart(3, '0') + '°' : '—';
-  function tlDrift(p){   // drift from the wind triangle: crosswind ÷ TAS (TAS ≈ GS + headwind when the OFP gives none)
+  const tlTrk = p => p && p[3] != null ? tl3(p[3]) + '°' : '—';
+  const tlTH = p => { if (!p || p[3] == null) return '—'; const h = tlHdgN(p); return `${tl3(p[3])}°<small> / </small>${h == null ? '—' : tl3(h) + '°'}`; };
+  const tlMsa = p => p && p[10] != null ? `<span class="${p[10] > 100 ? 'msahi' : ''}">${String(p[10]).padStart(3, '0')}</span>` : '—';
+  const tlVws = p => p && p[11] != null ? `<span class="${p[11] >= 9 ? 'vwsr' : p[11] >= 4 ? 'vwsy' : ''}">${p[11]}</span>` : '—';
+  function tlDriftN(p){   // drift from the wind triangle: crosswind ÷ TAS (TAS ≈ GS + headwind when the OFP gives none); + = wind from the right
+    if (!p || p[5] == null || p[3] == null) return null;
+    const rel = (p[5] - p[3]) * Math.PI / 180, xw = p[6] * Math.sin(rel), hw = p[6] * Math.cos(rel);
+    const tas = p[9] || (p[7] ? p[7] + hw : null); if (!tas) return null;
+    return Math.round(Math.asin(Math.max(-1, Math.min(1, xw / tas))) * 180 / Math.PI);
+  }
+  const tlHdgN = p => { if (!p || p[3] == null) return null; const d = tlDriftN(p); return d == null ? null : ((p[3] + d) % 360 + 360) % 360; };   // head into the wind
+  const tl3 = n => String(n === 0 ? 360 : n).padStart(3, '0');
+  function tlDrift(p){
     if (!p || p[5] == null || p[3] == null) return '—';
     const rel = (p[5] - p[3]) * Math.PI / 180, xw = p[6] * Math.sin(rel), hw = p[6] * Math.cos(rel);
     const tas = p[9] || (p[7] ? p[7] + hw : null); if (!tas) return '—';
     const d = Math.round(Math.asin(Math.max(-1, Math.min(1, xw / tas))) * 180 / Math.PI);
     return d ? `${Math.abs(d)}° ${d > 0 ? 'L' : 'R'}` : '0°';   // wind from the right pushes the track left of the heading
   }
-  function tlTurn(from, to){
-    if (!from || !to || from[3] == null || to[3] == null) return '—';
-    const d = ((to[3] - from[3] + 540) % 360) - 180;
+  function tlTurn(from, to){   // heading change (falls back to track when no wind)
+    const h = q => tlHdgN(q) ?? (q ? q[3] : null);
+    if (!from || !to || h(from) == null || h(to) == null) return '—';
+    const d = ((h(to) - h(from) + 540) % 360) - 180;
     return d ? `${d > 0 ? 'R' : 'L'} ${Math.abs(d)}°` : 'no turn';
   }
   function tlCard(lab, p, extra, turn){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
     return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b><span class="tlx">${extra}</span></div>
-      <div class="tlg">${cell('FL', tlFL(p))}${cell('TRK', tlTrk(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('TEMP', tlTemp(p))}${cell('WIND', tlWind(p))}${cell('DRIFT', tlDrift(p))}</div></div>`;
+      <div class="tlg tlg3">${cell('FL', tlFL(p))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
+      <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('DRIFT', tlDrift(p))}${cell('TEMP', tlTemp(p))}${cell('WIND', tlWind(p))}</div></div>`;
   }
   function tlRender(e){
     const box = $('ofpOut'), nav = e.data.nav;
-    if (!nav || (e.data.navV || 1) < 2){ box.innerHTML = '<div class="nempty">Open this OFP PDF again so the Timeline can read its nav log points.</div>'; return; }
+    if (!nav || (e.data.navV || 1) < 3){ box.innerHTML = '<div class="nempty">Open this OFP PDF again so the Timeline can read its nav log points.</div>'; return; }
     const to = tlToMs(e), toV = to ? tlZ(to.ms) : '';
     box.innerHTML = `<div class="tltop">
         <div class="tlclk"><span class="tlk">UTC</span><b id="tlUtc">--:--:--</b></div>
@@ -2185,19 +2205,34 @@
         <button class="btn small" id="tlToM" aria-label="Take-off 1 minute earlier">−</button>
         <input class="num t24" id="tlTo" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="${toV}"><span class="unit">Z</span>
         <button class="btn small" id="tlToP" aria-label="Take-off 1 minute later">+</button>
-        <button class="btn small" id="tlNow">Now</button>
         <span class="tlpl" id="tlPl">${to && to.planned ? 'planned (STD + taxi)' : ''}</span></div>
+      <div class="tlal" id="tlAl"></div>
       <div id="tlCards"></div>
       <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr" data-i="${i}"><span>${ofpEsc(p[0])}</span><span>${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
     const setTo = ms => { ofp.tlTo = ofp.tlTo || {}; ofp.tlTo[e.id] = ms; store.set('ofp', ofp); $('tlTo').value = tlZ(ms); $('tlPl').textContent = ''; tlTick(true); };
     $('tlToM').onclick = () => { const t = tlToMs(e); if (t) setTo(t.ms - 60e3); };
     $('tlToP').onclick = () => { const t = tlToMs(e); if (t) setTo(t.ms + 60e3); };
-    $('tlNow').onclick = () => { const n = Date.now(); setTo(n - n % 60e3); };
     bind24($('tlTo'), v => { if (!v || document.activeElement === $('tlTo')) return; const t = tlToMs(e); const [h, m] = v.split(':').map(Number);
       const base = new Date(t ? t.ms : Date.now()); let ms = Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), h, m);
       if (ms - Date.now() > 12 * 3600e3) ms -= 864e5; else if (Date.now() - ms > 18 * 3600e3) ms += 864e5;
       if (!t || ms !== t.ms) setTo(ms); });
     tlLast = -2; tlTick(true);
+  }
+  // What's coming up in the next 30 min: FIR change, VWS ≥ 4, CLB/DES, MSA above 100 (high ground)
+  function tlAlerts(nav, el){
+    const out = []; let lastFl = null, lastWasDes = false;
+    nav.forEach(p => {
+      const num = /^\d{3}$/.test(p[2]) ? +p[2] : null, soon = p[1] > el && p[1] <= el + 30;
+      if (soon && p[0].startsWith('-')) out.push([p[1], 'FIR change', p[0].slice(1)]);
+      if (soon && p[11] != null && p[11] >= 4) out.push([p[1], 'VWS', `${p[11]} at ${p[0]}`, p[11] >= 9 ? 'vwsr' : 'vwsy']);
+      if (num != null && lastFl != null && num !== lastFl && soon) out.push([p[1], num > lastFl ? 'CLB' : 'DES', `FL${lastFl} → ${num} at ${p[0]}`]);
+      if (p[2] === 'DES' && !lastWasDes && soon && !out.some(o => o[1] === 'DES' && p[1] - o[0] <= 10)) out.push([p[1], 'DES', `descent by ${p[0].replace(/^-/, '')}`]);
+      if (soon && p[10] != null && p[10] > 100) out.push([p[1], 'High Ground', `MSA ${String(p[10]).padStart(3, '0')} at ${p[0]}`, 'msahi']);
+      if (num != null) lastFl = num; lastWasDes = p[2] === 'DES';
+    });
+    $('tlAl').innerHTML = `<div class="tlk">Next 30 min</div>` + (out.length
+      ? out.sort((a, b) => a[0] - b[0]).map(a => `<div class="tla"><span class="tlat">in ${Math.max(0, Math.round(a[0] - el))}m</span><b class="${a[3] || ''}">(${a[1]})</b><span>${ofpEsc(a[2])}</span></div>`).join('')
+      : '<div class="tla"><span class="dimtxt">Nothing coming up</span></div>');
   }
   let tlLast = -2;
   function tlTick(force){
@@ -2220,6 +2255,7 @@
       document.querySelectorAll('#tlList .tlr').forEach(r => { const i = +r.dataset.i; r.classList.toggle('now', i === ci); r.classList.toggle('next', i === ci + 1); r.classList.toggle('past', i < ci); });
     }
     const tin = $('tlIn'); if (tin && nx) tin.textContent = 'in ' + tlHMS((nx[1] * 60 - sec));
+    if (force || Math.floor(sec) % 15 === 0) tlAlerts(nav, el);
   }
   setInterval(() => { if ($('view-ofp').classList.contains('active')) tlTick(false); }, 1000);
 
