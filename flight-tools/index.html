@@ -389,6 +389,7 @@
   .tlg small.hw,.tllist small.hw{color:#ff9b8a} .tlg small.tw,.tllist small.tw{color:#7ee08a}
   .tllist{margin-top:6px;border-top:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
   .tlr{display:grid;grid-template-columns:1.3fr .9fr .9fr .6fr 1.6fr;gap:6px;padding:5px 6px;border-bottom:1px solid var(--line)}
+  .tlv small.turn{color:var(--amber);font-size:.7em;font-weight:600}
   .tlr.past{color:var(--dim)}
   .tlr.now{background:rgba(245,165,36,.18);font-weight:600}
   .tlr.next{background:rgba(88,166,255,.12)}
@@ -918,7 +919,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.02';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.03';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1746,22 +1747,31 @@
       if (!low){ const re2 = /RTOW\s+(\d{3}\.\d)\s*\(\s*(PERF|LAND|STRUC)\s*\)/gi; while ((m = re2.exec(txt))){ const v = Math.round(+m[1] * 1000); if (!low || v < low.v) low = {t: m[2].toUpperCase(), v}; } }
       if (low){ o.rtowKg = Math.floor(low.v / 100) * 100; o.rtowType = low.t; }
     }
-    // Nav log points (Timeline): "NAME [FREQ] ACTM ZTM …" then "Nxx xx.x Exxx xx.x [MSA] DIS PFL RETA IMT PDN [FWIND] GSP DRM PFRM"
+    // Nav log points (Timeline). Two lines per point:
+    //  POSN [FREQ] ACTM ZTM ATA AFL ETA OAT ADN AWIND TAS VWS ZFRQ AFRM
+    //  COORD MSA DIS PFL RETA IMT PDN FWIND GSP DRM PFRM DIFF   — fields can be blank (FIR boundaries, EDTO points, TOC/TOD)
     if (!o.nav){
       const nav = [], l1 = /^(-?[A-Z0-9]{2,7})\s+(?:\d{3}\.\d{1,2}\s+)?(\d\d)\.(\d\d)\s+\d+\.\d\d\s+\.\.\./,
-            l2 = /^([NS]\d\d \d\d\.\d)\s+([EW]\d{3} \d\d\.\d)\s+(?:(\d{3})\*?)?\s*(\d{4})\s+(?:(CLB|DSC|DES|\d{3})\s+)?\S+\s+(\d{3})?\s*(?:([PM]\d\d)\s+)?(?:(\d{3})(\d{2,3})\s+)?(\d{3})\s+(\d{4})\s+(\d{3}\.\d)/;
+            co = /^([NS]\d\d \d\d\.\d)\s+([EW]\d{3} \d\d\.\d)\s+(.*)$/;
       let pend = null;
       (o._navL || []).forEach(({l}) => {
         const t = l.trim(), a = t.match(l1);
-        if (a){ pend = {n: a[1], t: +a[2] * 60 + +a[3]}; return; }
-        const b = pend && t.match(l2);
-        if (b){
-          if (!pend.n.startsWith('-'))   // FIR boundaries (-VOMF) carry no track/wind
-            nav.push([pend.n, pend.t, b[5] === 'DSC' ? 'DES' : (b[5] || ''), b[6] ? +b[6] : null, b[7] ? (b[7][0] === 'M' ? -1 : 1) * +b[7].slice(1) : null, b[8] ? +b[8] : null, b[9] ? +b[9] : null, +b[10], +b[4]]);
-          pend = null;
-        }
+        if (a){ const tas = t.match(/\.{5}\s+(\d{3})\b/); pend = {n: a[1], t: +a[2] * 60 + +a[3], tas: tas ? +tas[1] : null}; return; }
+        const c = pend && t.match(co); if (!c) return;
+        const k = c[3].replace(/\*/g, ' ').split(/\s+/).filter(Boolean); let i = 0;
+        const r = {msa: null, dis: null, fl: '', trk: null, pdn: null, wd: null, ws: null, gs: null};
+        if (/^\d{3}$/.test(k[i]) && /^\d{4}$/.test(k[i+1] || '')) r.msa = +k[i++];
+        if (/^\d{4}$/.test(k[i])) r.dis = +k[i++];
+        if (/^(CLB|DSC|DES|\d{3})$/.test(k[i]) && k[i+1] === '...'){ r.fl = k[i] === 'DSC' ? 'DES' : k[i]; i++; }
+        if (k[i] === '...') i++;
+        if (/^\d{3}$/.test(k[i])) r.trk = +k[i++];
+        if (/^[PM]\d\d$/.test(k[i])){ r.pdn = (k[i][0] === 'M' ? -1 : 1) * +k[i].slice(1); i++; }
+        if (/^\d{5,6}$/.test(k[i])){ r.wd = +k[i].slice(0, 3); r.ws = +k[i].slice(3); i++; }
+        if (/^\d{3}$/.test(k[i])) r.gs = +k[i++];
+        nav.push([pend.n, pend.t, r.fl, r.trk, r.pdn, r.wd, r.ws, r.gs, r.dis, pend.tas]);
+        pend = null;
       });
-      if (nav.length >= 3) o.nav = nav;   // [name, ACTM min, FL|CLB|DES, track, ISA dev, wind dir, wind kt, GS, dist]
+      if (nav.length >= 3){ o.nav = nav; o.navV = 2; }   // [name, ACTM min, FL|CLB|DES, IMT, PDN, wind dir, wind kt, GS, dist, TAS]
     }
     if (o.altnFuel == null) o.altnFuel = after(/ALTN\s+FUEL/, /\b(\d{4,6})\b/);
     if (o.altnHold == null) o.altnHold = after(/ALTN\s+HOLD/, /\b(\d{4,6})\b/);
@@ -2144,15 +2154,28 @@
     return `${pad2(p[5]).padStart(3, '0')}/${p[6]} <small class="${c > 0 ? 'hw' : 'tw'}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${c ? Math.abs(c) : '0'}</small>`;
   }
   const tlFL = p => p[2] || '—';
-  function tlCard(lab, p, extra){
+  const tlTrk = p => p && p[3] != null ? String(p[3]).padStart(3, '0') + '°' : '—';
+  function tlDrift(p){   // drift from the wind triangle: crosswind ÷ TAS (TAS ≈ GS + headwind when the OFP gives none)
+    if (!p || p[5] == null || p[3] == null) return '—';
+    const rel = (p[5] - p[3]) * Math.PI / 180, xw = p[6] * Math.sin(rel), hw = p[6] * Math.cos(rel);
+    const tas = p[9] || (p[7] ? p[7] + hw : null); if (!tas) return '—';
+    const d = Math.round(Math.asin(Math.max(-1, Math.min(1, xw / tas))) * 180 / Math.PI);
+    return d ? `${Math.abs(d)}° ${d > 0 ? 'L' : 'R'}` : '0°';   // wind from the right pushes the track left of the heading
+  }
+  function tlTurn(from, to){
+    if (!from || !to || from[3] == null || to[3] == null) return '—';
+    const d = ((to[3] - from[3] + 540) % 360) - 180;
+    return d ? `${d > 0 ? 'R' : 'L'} ${Math.abs(d)}°` : 'no turn';
+  }
+  function tlCard(lab, p, extra, turn){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
     return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b><span class="tlx">${extra}</span></div>
-      <div class="tlg">${cell('FL', tlFL(p))}${cell('TRK', p[3] != null ? String(p[3]).padStart(3, '0') + '°' : '—')}${cell('TEMP', tlTemp(p))}${cell('WIND', tlWind(p))}</div></div>`;
+      <div class="tlg">${cell('FL', tlFL(p))}${cell('TRK', tlTrk(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('TEMP', tlTemp(p))}${cell('WIND', tlWind(p))}${cell('DRIFT', tlDrift(p))}</div></div>`;
   }
   function tlRender(e){
     const box = $('ofpOut'), nav = e.data.nav;
-    if (!nav){ box.innerHTML = '<div class="nempty">No nav log points saved for this OFP yet — open the OFP PDF again to read them.</div>'; return; }
+    if (!nav || (e.data.navV || 1) < 2){ box.innerHTML = '<div class="nempty">Open this OFP PDF again so the Timeline can read its nav log points.</div>'; return; }
     const to = tlToMs(e), toV = to ? tlZ(to.ms) : '';
     box.innerHTML = `<div class="tltop">
         <div class="tlclk"><span class="tlk">UTC</span><b id="tlUtc">--:--:--</b></div>
@@ -2192,7 +2215,8 @@
       tlLast = ci;
       const cur = ci >= 0 ? nav[ci] : null;
       $('tlCards').innerHTML = tlCard('Now', cur, cur ? `${tlHM(cur[1])} · ${tlZ(to.ms + cur[1] * 60e3)}Z` : (sec < 0 ? 'before take-off' : 'climbing out'))
-        + tlCard('Next', nx, nx ? `<span id="tlIn"></span> · ${tlZ(to.ms + nx[1] * 60e3)}Z` : 'arrived');
+        + tlCard('Next', nx, nx ? `<span id="tlIn"></span> · ${tlZ(to.ms + nx[1] * 60e3)}Z` : 'arrived',
+                 nx && cur ? tlTurn([...nav.slice(0, ci + 1)].reverse().find(q => q[3] != null), nx) : '');
       document.querySelectorAll('#tlList .tlr').forEach(r => { const i = +r.dataset.i; r.classList.toggle('now', i === ci); r.classList.toggle('next', i === ci + 1); r.classList.toggle('past', i < ci); });
     }
     const tin = $('tlIn'); if (tin && nx) tin.textContent = 'in ' + tlHMS((nx[1] * 60 - sec));
