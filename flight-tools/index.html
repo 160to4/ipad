@@ -374,11 +374,15 @@
   .tlclk{padding:5px 10px}
   .tlto{display:flex;align-items:center;gap:5px;margin:6px 0;flex-wrap:nowrap}
   .tlsep{margin-left:6px}
-  .tladj{min-width:52px;text-align:center;font-size:15px;font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:5px 4px;background:var(--bg)}
-  .tladj.on{color:var(--amber);border-color:var(--amber)}
-  #ofpOut .tlto .btn{flex:none;width:30px;min-width:0;padding:0;height:32px;min-height:0;font-size:17px}
+  .tladj{min-width:46px;text-align:center;font-size:11px;font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:6px 4px;background:var(--bg)}
+  .tladjt{color:var(--amber)}
+  .tlnext .tlh b{color:var(--mag)}
+  .tlrep{color:var(--amber);font-size:.7em;font-weight:600;margin-left:6px;white-space:nowrap}
+  .tlr .tlrep{display:none} .tlr.rep .tlrep{display:inline}
+  .tlr{cursor:pointer} .tlr.rep{background:rgba(245,165,36,.08)}
+  #ofpOut .tlto .btn{flex:none;width:26px;min-width:0;padding:0;height:28px;min-height:0;font-size:13px}
   #ofpOut .tlto #tlNow{width:auto;padding:0 12px;font-size:13px}
-  #ofpOut .tlto .num.t24{flex:none;width:70px;height:32px;font-size:15px}
+  #ofpOut .tlto .num.t24{flex:none;width:58px;height:28px;font-size:11px;padding:0 4px}
   .tlk{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600}
   .tlpl{font-size:11px;color:var(--dim)}
   .tlc{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:6px}
@@ -932,7 +936,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.05';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.06';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2192,14 +2196,15 @@
     const d = ((h(to) - h(from) + 540) % 360) - 180;
     return d ? `${d > 0 ? 'R' : 'L'} ${Math.abs(d)}°` : 'no turn';
   }
-  function tlCard(lab, p, extra, turn){
+  function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
-    return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b><span class="tlx">${extra}</span></div>
+    return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
       <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('WIND', tlWind(p))}</div></div>`;
   }
   const tlAdj = e => ((ofp.tlAdj || {})[e.id]) || 0;
+  const tlRep = e => new Set(((ofp.tlRepP || {})[e.id]) || []);
   function tlRender(e){
     const box = $('ofpOut'), adj = tlAdj(e), nav = e.data.nav && e.data.nav.map(p => { const q = p.slice(); q[1] += adj; return q; });
     if (!nav || (e.data.navV || 1) < 3){ box.innerHTML = '<div class="nempty">Open this OFP PDF again so the Timeline can read its nav log points.</div>'; return; }
@@ -2218,12 +2223,16 @@
         <button class="btn small" id="tlAdP" aria-label="Waypoint times 1 minute later">+</button></div>
       <div class="tlal" id="tlAl"></div>
       <div id="tlCards"></div>
-      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr" data-i="${i}"><span>${ofpEsc(p[0])}</span><span>${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
+      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr${tlRep(e).has(i) ? ' rep' : ''}" data-i="${i}"><span>${ofpEsc(p[0])}<small class="tlrep">(report to ATC)</small></span><span class="${adj ? 'tladjt' : ''}">${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
     const setTo = ms => { ofp.tlTo = ofp.tlTo || {}; ofp.tlTo[e.id] = ms; store.set('ofp', ofp); $('tlTo').value = tlZ(ms); tlTick(true); };
     // ADJ: shifts every waypoint time (e.g. running late in flight) — NINOP 06:53 → 06:54 with one +
-    const adShow = () => { const a = tlAdj(e); $('tlAd').textContent = (a < 0 ? '−' : '+') + tlHM(Math.abs(a)); $('tlAd').classList.toggle('on', !!a); };
+    const adShow = () => { const a = tlAdj(e); $('tlAd').textContent = (a < 0 ? '−' : '+') + tlHM(Math.abs(a)); };
     const adSet = k => { ofp.tlAdj = ofp.tlAdj || {}; const v = tlAdj(e) + k; if (v) ofp.tlAdj[e.id] = v; else delete ofp.tlAdj[e.id]; store.set('ofp', ofp); adShow(); tlRender(e); };
     $('tlAdM').onclick = () => adSet(-1); $('tlAdP').onclick = () => adSet(1); adShow();
+    // tap a point in the list to mark it as a reporting point (tap again to clear)
+    $('tlList').onclick = ev => { const r = ev.target.closest('.tlr'); if (!r) return; const i = +r.dataset.i;
+      ofp.tlRepP = ofp.tlRepP || {}; const set = new Set(ofp.tlRepP[e.id] || []); set.has(i) ? set.delete(i) : set.add(i);
+      ofp.tlRepP[e.id] = [...set]; store.set('ofp', ofp); r.classList.toggle('rep', set.has(i)); tlTick(true); };
     $('tlToM').onclick = () => { const t = tlToMs(e); if (t) setTo(t.ms - 60e3); };
     $('tlToP').onclick = () => { const t = tlToMs(e); if (t) setTo(t.ms + 60e3); };
     bind24($('tlTo'), v => { if (!v || document.activeElement === $('tlTo')) return; const t = tlToMs(e); const [h, m] = v.split(':').map(Number);
@@ -2233,9 +2242,10 @@
     tlLast = -2; tlTick(true);
   }
   // What's coming up in the next 30 min: FIR change, VWS ≥ 4, CLB/DES, MSA above 100 (high ground)
-  function tlAlerts(nav, el){
+  function tlAlerts(nav, el, rep){
     const out = []; let lastFl = null, lastWasDes = false;
-    nav.forEach(p => {
+    nav.forEach((p, i) => {
+      if (rep && rep.has(i) && p[1] > el && p[1] <= el + 30) out.push([p[1], 'Report to ATC', ofpEsc(p[0].replace(/^-/, ''))]);
       const num = /^\d{3}$/.test(p[2]) ? +p[2] : null, soon = p[1] > el && p[1] <= el + 30;
       if (soon && p[0].startsWith('-')) out.push([p[1], 'FIR change', ofpEsc(p[0].slice(1))]);
       if (soon && p[11] != null && p[11] >= 4) out.push([p[1], 'VWS', `<b class="${p[11] >= 9 ? 'vwsr' : 'vwsy'}">${p[11]}</b> at ${ofpEsc(p[0])}`]);
@@ -2245,7 +2255,7 @@
       if (num != null) lastFl = num; lastWasDes = p[2] === 'DES';
     });
     $('tlAl').innerHTML = `<div class="tlk">Next 30 min</div>` + (out.length
-      ? out.sort((a, b) => a[0] - b[0]).map(a => `<div class="tla"><span class="tlat">in ${Math.max(0, Math.round(a[0] - el))}m</span><b>(${a[1]})</b><span>${a[2]}</span></div>`).join('')
+      ? out.sort((a, b) => a[0] - b[0]).map(a => `<div class="tla"><span class="tlat">in ${Math.max(0, Math.round(a[0] - el))} min</span><b>${a[1]}</b><span>${a[2]}</span></div>`).join('')
       : '<div class="tla"><span class="dimtxt">Nothing coming up</span></div>');
   }
   let tlLast = -2;
@@ -2256,7 +2266,7 @@
     const now = Date.now(), d = new Date(now);
     $('tlUtc').textContent = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds());
     const to = tlToMs(e); if (!to){ $('tlEl').textContent = '--:--:--'; return; }
-    const sec = (now - to.ms) / 1000, el = sec / 60, nav = e.data.nav.map(p => { const q = p.slice(); q[1] += adj; return q; });
+    const sec = (now - to.ms) / 1000, el = sec / 60, nav = e.data.nav.map(p => { const q = p.slice(); q[1] += adj; return q; }), rep = tlRep(e);
     $('tlEl').textContent = tlHMS(sec);
     let ci = -1; nav.forEach((p, i) => { if (p[1] <= el) ci = i; });
     // countdown to the next point refreshes every second; the cards only when we pass a point
@@ -2264,13 +2274,14 @@
     if (force || ci !== tlLast){
       tlLast = ci;
       const cur = ci >= 0 ? nav[ci] : null;
-      $('tlCards').innerHTML = tlCard('Now', cur, cur ? `${tlHM(cur[1])} · ${tlZ(to.ms + cur[1] * 60e3)}Z` : (sec < 0 ? 'before take-off' : 'climbing out'))
-        + tlCard('Next', nx, nx ? `<span id="tlIn"></span> · ${tlZ(to.ms + nx[1] * 60e3)}Z` : 'arrived',
-                 nx && cur ? tlTurn([...nav.slice(0, ci + 1)].reverse().find(q => q[3] != null), nx) : '');
+      const ya = adj ? ' class="tladjt"' : '';
+      $('tlCards').innerHTML = tlCard('Now', cur, cur ? `<span${ya}>${tlHM(cur[1])} · ${tlZ(to.ms + cur[1] * 60e3)}Z</span>` : (sec < 0 ? 'before take-off' : 'climbing out'), '', rep.has(ci))
+        + tlCard('Next', nx, nx ? `<span id="tlIn"></span> · <span${ya}>${tlZ(to.ms + nx[1] * 60e3)}Z</span>` : 'arrived',
+                 nx && cur ? tlTurn([...nav.slice(0, ci + 1)].reverse().find(q => q[3] != null), nx) : '', rep.has(ci + 1));
       document.querySelectorAll('#tlList .tlr').forEach(r => { const i = +r.dataset.i; r.classList.toggle('now', i === ci); r.classList.toggle('next', i === ci + 1); r.classList.toggle('past', i < ci); });
     }
     const tin = $('tlIn'); if (tin && nx) tin.textContent = 'in ' + tlHMS((nx[1] * 60 - sec));
-    if (force || Math.floor(sec) % 15 === 0) tlAlerts(nav, el);
+    if (force || Math.floor(sec) % 15 === 0) tlAlerts(nav, el, rep);
   }
   setInterval(() => { if ($('view-ofp').classList.contains('active')) tlTick(false); }, 1000);
 
