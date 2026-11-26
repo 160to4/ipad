@@ -946,7 +946,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.13';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.14';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1959,7 +1959,7 @@
     const ezNow = ezKg0 != null ? (dz ? up1(ezKg0 + dz * 1000) : d.pzfw) : null;
     const adjCtl = `<span class="adj" style="margin-left:0"><button data-adj="-1" aria-label="EZFW minus 0.1">−</button><input id="ofpAdj" inputmode="decimal" value="${ezNow != null ? ezNow.toFixed(1) : ''}" class="${brief ? 'hlin' : dz ? 'on' : ''}" aria-label="EZFW in tonnes"><button data-adj="1" aria-label="EZFW plus 0.1"${canRaise(Math.round((dz + 0.1) * 10) / 10) ? '' : ' disabled title="PTOW at maximum"'}>+</button></span>`;
     const dzTxt = dz ? `<span class="zdiff">${dz > 0 ? '+' : '−'}${Math.abs(dz).toFixed(1)}</span>` : '';
-    let fitV = tn(d.fit), ptowV = tn(d.ptow);
+    let fitV = tn(d.fitKg != null ? Math.ceil(Math.round(d.fitKg) / 100) / 10 : d.fit), ptowV = tn(d.ptow);
     const pzKg = d.pzfwKg != null ? d.pzfwKg : (d.pzfw != null ? d.pzfw * 1000 : null);
     const pzfwV = dz && pzKg != null ? `<span class="new">${up1(pzKg + dz * 1000).toFixed(1)}<small>T</small></span>` : tn(d.pzfw);
     // Extra fuel loaded on top of the plan (per OFP), in 0.1T steps
@@ -2019,12 +2019,13 @@
     if (dz || xs){
       const fitKg = d.fitKg != null ? d.fitKg : (d.fit != null ? d.fit * 1000 : null);
       if (fitKg != null){
-        const nf = up1(fitKg + loadKg + xs * 1000);
+        // OFP fuel rounded up, plus the extra burn rounded up on its own (e.g. 134.1 + 142KG → 134.1 + 0.2 = 134.3)
+        const fit0 = up1(fitKg), add = loadKg ? up1(loadKg) : 0, nf = Math.round((fit0 + add + xs) * 10) / 10;
         const why = [];
-        if (dz > 0) why.push(noRate ? 'no burn add figure in this OFP' : `+${Math.round(loadKg)}KG burn (+${dz.toFixed(1)}T × ${rate}KG per 1000KG)`);
+        if (dz > 0) why.push(noRate ? 'no burn add figure in this OFP' : `+${add.toFixed(1)}T burn (${Math.round(loadKg)}KG: +${dz.toFixed(1)}T × ${rate}KG per 1000KG)`);
         else if (dz < 0) why.push('lighter ZFW: fuel unchanged');
         if (xs) why.push(`${sgn(xs)}${Math.abs(xs).toFixed(1)}T excess`);
-        fitV = nf === d.fit && !xs ? `${tn(d.fit)}<span class="calc">${why.join(' · ')}</span>` : `${tn(d.fit)}<span class="arrow">→</span><span class="new">${nf.toFixed(1)}<small>T</small></span><span class="calc">${why.join(' · ')}</span>`;
+        fitV = nf === fit0 && !xs ? `${tn(fit0)}<span class="calc">${why.join(' · ')}</span>` : `${tn(fit0)}<span class="arrow">→</span><span class="new">${nf.toFixed(1)}<small>T</small></span><span class="calc">${why.join(' · ')}</span>`;
       }
       const ptowKg = d.ptowKg != null ? d.ptowKg : (d.ptow != null ? d.ptow * 1000 : null);
       if (ptowKg != null){
