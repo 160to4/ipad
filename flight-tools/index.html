@@ -420,6 +420,8 @@
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
+  .pobl{display:block;margin-top:6px;font-size:10px;color:var(--dim);letter-spacing:.06em}
+  .pobl b{display:block;font-size:20px;color:var(--text);font-weight:600;letter-spacing:0}
   .kidrow .kl{margin-right:6px!important}
   .kidrow .kl:not(:first-child){margin-left:4px}
   .paxcell{display:inline-flex;flex-direction:column;align-items:center}
@@ -943,7 +945,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.11';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.12';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1900,9 +1902,11 @@
     // PAX (4 cabins, editable, shows change from the default) and cabin crew names — saved per OFP
     const PAX_DEF = [4, 48, 28, 184];
     const pax = ((ofp.pax || {})[e.id]) || PAX_DEF.slice();
-    const kid = i => { const v = pax[i] ?? '0'; return `<input class="paxin${+v ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="${i === 4 ? 'Child' : 'Infant'}">`; };
+    const kid = i => { const v = pax[i] ?? '0'; return `<input class="paxin${+v ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="${['Child', 'Infant', 'Crew'][i - 4]}">`; };
+    // POB = the four cabin figures + infants + crew (children are already counted in the cabin figures)
+    const pob = pp => [0, 1, 2, 3, 5, 6].reduce((a, i) => a + (parseInt(pp[i], 10) || 0), 0);
     const dlt = (v, i) => { const n = parseInt(v, 10); if (isNaN(n) || n === PAX_DEF[i]) return ''; const d = n - PAX_DEF[i]; return (d > 0 ? '+' : '−') + Math.abs(d); };
-    const paxV = `<span class="paxrow">${pax.slice(0, 4).map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span><span class="kidrow"><span class="kl">Child</span>${kid(4)}<span class="paxsep">/</span><span class="kl">Inf.</span>${kid(5)}</span>`;
+    const paxV = `<span class="paxrow">${pax.slice(0, 4).map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span><span class="kidrow"><span class="kl">Child</span>${kid(4)}<span class="paxsep">/</span><span class="kl">Inf.</span>${kid(5)}</span><span class="kidrow"><span class="kl">Crew</span>${kid(6)}</span>`;
     if (!ofp.crewAll) ofp.crewAll = Object.assign({}, (ofp.crew || {})[e.id]);   // crew names stay when a new OFP is loaded
     const crew = ofp.crewAll;
     const cin = (k, ph) => `<input class="crewin" data-crew="${k}" data-id="${e.id}" value="${ofpEsc(crew[k] || '')}" placeholder="${ph}" autocapitalize="words" autocomplete="off" spellcheck="false">`;
@@ -2058,7 +2062,7 @@
             : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
           : null, false, 'route')}
         <div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}</div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>
-        ${ofpField('PAX', paxV)}
+        ${ofpField(`PAX<span class="pobl">POB <b id="pobV">${pob(pax)}</b></span>`, paxV)}
         ${crewHtml}
       </div>`;
     // Steppers (PZFW, excess, landing fuel). Typed values are saved as you type, and −/+ always step from
@@ -2392,8 +2396,9 @@
     const t = ev.target;
     if (t.matches('.paxin')){
       t.value = t.value.replace(/\D/g, '').slice(0, 3);
-      const id = t.dataset.id, i = +t.dataset.pax, DEF = [4, 48, 28, 184, 0, 0];
-      ofp.pax = ofp.pax || {}; const p = ofp.pax[id] || DEF.slice(); while (p.length < 6) p.push(0); p[i] = t.value; ofp.pax[id] = p; store.set('ofp', ofp);
+      const id = t.dataset.id, i = +t.dataset.pax, DEF = [4, 48, 28, 184, 0, 0, 0];
+      ofp.pax = ofp.pax || {}; const p = ofp.pax[id] || DEF.slice(); while (p.length < 7) p.push(0); p[i] = t.value; ofp.pax[id] = p; store.set('ofp', ofp);
+      const pv = $('pobV'); if (pv) pv.textContent = [0, 1, 2, 3, 5, 6].reduce((a, k) => a + (parseInt(p[k], 10) || 0), 0);
       const n = parseInt(t.value, 10), d = isNaN(n) ? 0 : n - DEF[i];
       const lab = t.parentElement.querySelector('.paxd'); if (lab) lab.textContent = d ? (d > 0 ? '+' : '−') + Math.abs(d) : '';
       t.classList.toggle('chg', !!d);
