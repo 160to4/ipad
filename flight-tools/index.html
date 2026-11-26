@@ -413,6 +413,8 @@
   .tlfw > div{display:flex;flex-direction:column;align-items:center;padding:2px 0;border-radius:6px;line-height:1.25}
   .tlfw > div.on{background:rgba(88,166,255,.14)}
   .tlfw .tlk{font-size:9px}
+  .tlwtap{cursor:pointer;border-radius:6px} .tlwtap:active{background:rgba(255,255,255,.06)}
+  .tlchev{font-size:10px;color:var(--dim)}
   .tlfw .hw{color:#ff9b8a} .tlfw .tw{color:#7ee08a}
   .tlfw small{font-size:.85em;color:var(--dim)}
   .tlr.past{display:none}
@@ -952,7 +954,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.16';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.17';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2253,12 +2255,13 @@
         + (c != null ? `<span class="${c > 0 ? 'hw' : c < 0 ? 'tw' : ''}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${Math.abs(c)}</span>` : '')
         + `<span>${sg(t)}° <small>${sg(isa)}</small></span></div>`; }).join('')}</div>`;
   }
+  const tlFwOpen = {Now: false, Next: false};   // forecast-wind strip: tap WIND on a card to show/hide
   function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
     return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
-      <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('WIND', tlWind(p))}</div>${tlFw(p)}</div>`;
+      <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${tlFw(p) ? `<div class="tlwtap" data-fwt="${lab}"><span class="tlk">WIND <span class="tlchev">${tlFwOpen[lab] ? '▴' : '▾'}</span></span><div class="tlv">${tlWind(p)}</div></div>` : cell('WIND', tlWind(p))}</div>${tlFwOpen[lab] ? tlFw(p) : ''}</div>`;
   }
   const tlAdj = e => ((ofp.tlAdj || {})[e.id]) || 0;
   const FIRS = {WSJC:'Singapore',WMFC:'Kuala Lumpur',WBFC:'Kota Kinabalu',WIIF:'Jakarta',WAAF:'Ujung Pandang',VTBB:'Bangkok',VVHM:'Ho Chi Minh',VVHN:'Hanoi',VLVT:'Vientiane',VDPF:'Phnom Penh',VYYF:'Yangon',VGFR:'Dhaka',
@@ -2311,6 +2314,7 @@
       const base = new Date(t ? t.ms : Date.now()); let ms = Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), h, m);
       if (ms - Date.now() > 12 * 3600e3) ms -= 864e5; else if (Date.now() - ms > 18 * 3600e3) ms += 864e5;
       if (!t || ms !== t.ms) setTo(ms); });
+    $('tlCards').onclick = ev => { const w = ev.target.closest('[data-fwt]'); if (!w) return; tlFwOpen[w.dataset.fwt] = !tlFwOpen[w.dataset.fwt]; tlTick(true); };
     tlLast = -2; tlTick(true);
   }
   // What's coming up in the next 30 min: FIR change, VWS ≥ 4, CLB/DES, MSA above 100 (high ground)
