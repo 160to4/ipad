@@ -409,6 +409,10 @@
   .tla{display:flex;gap:8px;align-items:baseline;padding:2px 0;font-size:12px;font-variant-numeric:tabular-nums}
   .tla .tlat{min-width:48px;color:var(--dim);font-size:12px}
   .tla b{white-space:nowrap} .tla .dimtxt{color:var(--dim)}
+  .tlfw{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;margin-top:5px;padding-top:5px;border-top:1px solid var(--line);font-size:11px;font-variant-numeric:tabular-nums}
+  .tlfw > div{display:flex;flex-direction:column;align-items:center;padding:2px 0;border-radius:6px;line-height:1.25}
+  .tlfw > div.on{background:rgba(88,166,255,.14)}
+  .tlfw .tlk{font-size:9px}
   .tlr.past{display:none}
   .tladjg{color:var(--green)}
   .tlfir{margin-left:5px;white-space:nowrap}
@@ -946,7 +950,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.14';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.15';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1654,7 +1658,9 @@
       const items = (await (await pdf.getPage(p)).getTextContent()).items;
       const pl = ofpLines(items);
       if (p <= 6) pl.forEach(l => (o._lines = o._lines || []).push({p, l}));
-      if (p <= 60) pl.forEach(l => { if (/^-?[A-Z0-9]{2,7}\s.*\.\.\.|^[NS]\d\d \d\d\.\d/.test(l.trim())) (o._navL = o._navL || []).push({p, l}); });   // nav log lines for the Timeline
+      if (p <= 60) pl.forEach(l => { const t = l.trim();
+        if (/^-?[A-Z0-9]{2,7}\s.*\.\.\.|^[NS]\d\d \d\d\.\d/.test(t)) (o._navL = o._navL || []).push({p, l});   // nav log lines for the Timeline
+        else if (/^[A-Z0-9]{2,7}\s+\d{3}\s+\d{5}\s+[PM]\d\d\b/.test(t)) (o._fwL = o._fwL || []).push(t); });   // FORECAST WIND pages
       if (!o.fplPage && (items.some(it => (it.str || '').trim().toUpperCase() === 'ATC FLIGHT PLAN') || ofpLines(items).some(l => /^ATC FLIGHT PLAN$/i.test(l.trim())))) o.fplPage = p;
       if (o.fplPage && (p === o.fplPage || p === o.fplPage + 1)) o._fpl = (o._fpl || '') + ' ' + ofpLines(items).join(' ');
       for (let i = 0; i < items.length; i++){
@@ -1721,7 +1727,7 @@
         }
       }
     }
-    delete o._lines; delete o._navL;
+    delete o._lines; delete o._navL; delete o._fwL;
     // Route = field 15 of the ICAO flight plan: after the cruise speed/level (e.g. N0488F350), up to "-DEST0000"
     if (o._fpl){
       const t = o._fpl.replace(/\s+/g, ' ');
@@ -1777,6 +1783,15 @@
     // Nav log points (Timeline). Two lines per point:
     //  POSN [FREQ] ACTM ZTM ATA AFL ETA OAT ADN AWIND TAS VWS ZFRQ AFRM
     //  COORD MSA DIS PFL RETA IMT PDN FWIND GSP DRM PFRM DIFF   — fields can be blank (FIR boundaries, EDTO points, TOC/TOD)
+    // FORECAST WIND: "OGANA  350 11015 M42 300 09015 M29 280 08012 M24 260 06010 M19 ..." → 4 levels per point (OAT here is the actual temperature)
+    if (!o.fwind && o._fwL){
+      const fw = {};
+      o._fwL.forEach(t => { const n = t.split(/\s+/)[0]; if (n === 'CLB' || n === 'DES' || fw[n]) return;
+        const lv = [], re = /(\d{3})\s+(\d{2})(\d{3})\s+([PM])(\d\d)/g; let m; re.lastIndex = n.length;
+        while ((m = re.exec(t)) && lv.length < 4) lv.push([+m[1], +m[2] * 10, +m[3], (m[4] === 'M' ? -1 : 1) * +m[5]]);
+        if (lv.length) fw[n] = lv; });
+      if (Object.keys(fw).length) o.fwind = fw;
+    }
     if (!o.actype){
       const all = (o._lines || []).map(x => x.l).join(' '), m = all.match(/\bB777-(\d{3}[A-Z]{0,2})\b/), i = all.match(/-B77(W|L)\//);
       o.actype = m ? 'B777-' + m[1] : i ? (i[1] === 'W' ? 'B777-300ER' : 'B777-200F') : null;
@@ -2224,12 +2239,18 @@
     const d = ((h(to) - h(from) + 540) % 360) - 180;
     return d ? `${d > 0 ? 'R' : 'L'} ${Math.abs(d)}°` : 'no turn';
   }
+  // forecast winds/temps at the 4 levels the OFP gives for this point (the planned level highlighted)
+  function tlFw(p){
+    const e = ofp.recent.find(r => r.id === ofp.cur), fw = e && e.data.fwind && e.data.fwind[p[0]];
+    if (!fw) return '';
+    return `<div class="tlfw">${fw.map(([fl, wd, ws, t]) => `<div class="${String(fl) === p[2] ? 'on' : ''}"><span class="tlk">FL${fl}</span><span>${String(wd === 0 ? 360 : wd).padStart(3, '0')}/${ws}</span><span>${t < 0 ? '−' : '+'}${Math.abs(t)}°</span></div>`).join('')}</div>`;
+  }
   function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
     return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
-      <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('WIND', tlWind(p))}</div></div>`;
+      <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${cell('WIND', tlWind(p))}</div>${tlFw(p)}</div>`;
   }
   const tlAdj = e => ((ofp.tlAdj || {})[e.id]) || 0;
   const FIRS = {WSJC:'Singapore',WMFC:'Kuala Lumpur',WBFC:'Kota Kinabalu',WIIF:'Jakarta',WAAF:'Ujung Pandang',VTBB:'Bangkok',VVHM:'Ho Chi Minh',VVHN:'Hanoi',VLVT:'Vientiane',VDPF:'Phnom Penh',VYYF:'Yangon',VGFR:'Dhaka',
