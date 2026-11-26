@@ -954,7 +954,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.17';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.18';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1978,7 +1978,8 @@
     const ezNow = ezKg0 != null ? (dz ? up1(ezKg0 + dz * 1000) : d.pzfw) : null;
     const adjCtl = `<span class="adj" style="margin-left:0"><button data-adj="-1" aria-label="EZFW minus 0.1">−</button><input id="ofpAdj" inputmode="decimal" value="${ezNow != null ? ezNow.toFixed(1) : ''}" class="${brief ? 'hlin' : dz ? 'on' : ''}" aria-label="EZFW in tonnes"><button data-adj="1" aria-label="EZFW plus 0.1"${canRaise(Math.round((dz + 0.1) * 10) / 10) ? '' : ' disabled title="PTOW at maximum"'}>+</button></span>`;
     const dzTxt = dz ? `<span class="zdiff">${dz > 0 ? '+' : '−'}${Math.abs(dz).toFixed(1)}</span>` : '';
-    let fitV = tn(d.fitKg != null ? Math.ceil(Math.round(d.fitKg) / 100) / 10 : d.fit), ptowV = tn(d.ptow);
+    let fitNowT = d.fitKg != null ? Math.ceil(Math.round(d.fitKg) / 100) / 10 : d.fit;   // max discrepancy = 0.005 × fuel in tanks (kg) + 1433
+    let fitV = tn(fitNowT), ptowV = tn(d.ptow);
     const pzKg = d.pzfwKg != null ? d.pzfwKg : (d.pzfw != null ? d.pzfw * 1000 : null);
     const pzfwV = dz && pzKg != null ? `<span class="new">${up1(pzKg + dz * 1000).toFixed(1)}<small>T</small></span>` : tn(d.pzfw);
     // Extra fuel loaded on top of the plan (per OFP), in 0.1T steps
@@ -2040,6 +2041,7 @@
       if (fitKg != null){
         // OFP fuel rounded up, plus the extra burn rounded up on its own (e.g. 134.1 + 142KG → 134.1 + 0.2 = 134.3)
         const fit0 = up1(fitKg), add = loadKg ? up1(loadKg) : 0, nf = Math.round((fit0 + add + xs) * 10) / 10;
+        fitNowT = nf;
         const why = [];
         if (dz > 0) why.push(noRate ? 'no burn add figure in this OFP' : `+${add.toFixed(1)}T burn (${Math.round(loadKg)}KG: +${dz.toFixed(1)}T × ${rate}KG per 1000KG)`);
         else if (dz < 0) why.push('lighter ZFW: fuel unchanged');
@@ -2082,7 +2084,7 @@
         ${ofpField('Burn-off', burnV)}
         ${ofpField('Reserves', d.reserves != null || d.altn ? `${d.reserves != null ? hlB(tn(d.reserves)) : '—'}<span class="sep">·</span>${ofpEsc(d.altn || '—')}${ldg != null && d.reserves != null ? `<span class="br">(${ldg - d.reserves >= 0 ? '+' : '−'}${Math.abs(Math.round((ldg - d.reserves) * 10) / 10).toFixed(1)}T)</span>` : ''}` : null, false, '', brief ? 2 : 0)}
         ${ofpField('Excess fuel', xsCtl)}
-        ${ofpField('Fuel in tanks', fitV)}
+        ${fitV == null ? ofpField('Fuel in tanks', null) : `<div class="ofpf zfwf"><div class="k">Fuel in tanks</div><div class="v">${fitV}</div><div class="k">Max discrepancy</div><div class="v">${fitNowT != null ? `${Math.round(0.005 * fitNowT * 1000 + 1433).toLocaleString('en-US').replace(/,/g, ' ')}<small> KG</small>` : '—'}</div></div>`}
         ${ofpField('Burn +/-', ba)}
         ${ofpField('OptiClimb', ocV, false, 'ocdrop')}
         ${ofpField(`Route${d.route1 || d.route ? `<button class="fmcbtn${ofp.fmc ? ' on' : ''}" id="fmcBtn">FMC</button>` : ''}`, d.route1 || d.route ? (ofp.fmc
