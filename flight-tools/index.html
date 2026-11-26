@@ -367,11 +367,14 @@
   .fmcbtn.on{border-color:var(--mag);color:#ffb3f1;background:#3a0f33}
   .caution{display:block;margin-top:4px;color:var(--amber);font-weight:600;font-size:.9em}
   #ofpTl.on{background:#0f2a3a;border-color:#58a6ff;color:#b6dcff}
-  .tltop{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tltop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
   .tlclk{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column}
-  .tlclk b{font-size:26px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.02em}
-  body.compact .tlclk b{font-size:22px}
-  .tlclk{padding:5px 10px}
+  .tlclk b{font-size:clamp(14px,4.6vw,18px);font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+  body.compact .tlclk b{font-size:clamp(14px,4.4vw,17px)}
+  .tlclk{padding:4px 6px;min-width:0;overflow:hidden}
+  .tlarr{font-size:9px;color:var(--dim);font-variant-numeric:tabular-nums;line-height:1.25}
+  .tlarr span{white-space:nowrap}
+  .tlarr .late{color:var(--amber);font-weight:700} .tlarr .early{color:var(--green);font-weight:700}
   .tlto{display:flex;align-items:center;gap:5px;margin:6px 0;flex-wrap:nowrap}
   .tlsep{margin-left:6px}
   .tladj{min-width:46px;text-align:center;font-size:11px;font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:6px 4px;background:var(--bg)}
@@ -940,7 +943,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.10';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.11';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2202,8 +2205,8 @@
     const d = Math.round(Math.asin(Math.max(-1, Math.min(1, xw / tas))) * 180 / Math.PI);
     return d ? `${Math.abs(d)}° ${d > 0 ? 'L' : 'R'}` : '0°';   // wind from the right pushes the track left of the heading
   }
-  function tlTurn(from, to){   // heading change (falls back to track when no wind)
-    const h = q => tlHdgN(q) ?? (q ? q[3] : null);
+  function tlTurn(from, to){   // track change
+    const h = q => q ? q[3] : null;
     if (!from || !to || h(from) == null || h(to) == null) return '—';
     const d = ((h(to) - h(from) + 540) % 360) - 180;
     return d ? `${d > 0 ? 'R' : 'L'} ${Math.abs(d)}°` : 'no turn';
@@ -2238,6 +2241,7 @@
     box.innerHTML = `<div class="tltop">
         <div class="tlclk"><span class="tlk">UTC</span><b id="tlUtc">--:--:--</b></div>
         <div class="tlclk"><span class="tlk">Since T/O</span><b id="tlEl">--:--:--</b></div>
+        <div class="tlclk"><span class="tlk">To LDG</span><b id="tlRem">--:--</b><span class="tlarr" id="tlArr"></span></div>
       </div>
       <div class="tlto"><span class="tlk">T/O</span>
         <button class="btn small" id="tlToM" aria-label="Take-off 1 minute earlier">−</button>
@@ -2249,7 +2253,7 @@
         <button class="btn small" id="tlAdP" aria-label="Waypoint times 1 minute later">+</button></div>
       <div class="tlal" id="tlAl"></div>
       <div id="tlCards"></div>
-      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr${tlRep(e).has(i) ? ' rep' : ''}" data-i="${i}"><span>${ofpEsc(p[0])}${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}<small class="tlrep">(report to ATC)</small></span><span class="${tlAdjC(adj)}">${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
+      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr${tlRep(e).has(i) ? ' rep' : ''}" data-i="${i}"><span>${ofpEsc(p[0])}${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}<small class="tlrep">(report)</small></span><span class="${tlAdjC(adj)}">${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
     const setTo = ms => { ofp.tlTo = ofp.tlTo || {}; ofp.tlTo[e.id] = ms; store.set('ofp', ofp); $('tlTo').value = tlZ(ms); tlTick(true); };
     // ADJ: shifts every waypoint time (e.g. running late in flight) — NINOP 06:53 → 06:54 with one +
     const adShow = () => { const a = tlAdj(e); $('tlAd').textContent = (a < 0 ? '−' : '+') + tlHM(Math.abs(a)); };
@@ -2294,6 +2298,17 @@
     const to = tlToMs(e); if (!to){ $('tlEl').textContent = '--:--:--'; return; }
     const sec = (now - to.ms) / 1000, el = sec / 60, nav = e.data.nav.map(p => { const q = p.slice(); q[1] += adj; return q; }), rep = tlRep(e);
     $('tlEl').textContent = tlHMS(sec);
+    // To LDG: OFP flight time (+ ADJ) minus time since T/O; vs schedule: actual T/O against STD + taxi, plus ADJ (same block time)
+    const od = e.data, ftM = od.ft ? (+od.ft.split('.')[0]) * 60 + (+od.ft.split('.')[1]) : null;
+    if (ftM != null){
+      const rem = (ftM + adj) * 60 - sec; $('tlRem').textContent = tlHMS(Math.max(0, rem)).slice(0, -3);
+      if (od.std && /^\d{4}$/.test(od.std) && od.sta && /^\d{4}$/.test(od.sta)){
+        const t0 = new Date(to.ms); let pt = Date.UTC(t0.getUTCFullYear(), t0.getUTCMonth(), t0.getUTCDate(), +od.std.slice(0, 2), +od.std.slice(2)) + (crOfp.taxi || 0) * 60e3;
+        if (pt - to.ms > 12 * 3600e3) pt -= 864e5; else if (to.ms - pt > 12 * 3600e3) pt += 864e5;
+        const late = Math.round((to.ms - pt) / 60e3 + adj), sta = new Date(Date.UTC(2000, 0, 1, +od.sta.slice(0, 2), +od.sta.slice(2)) + late * 60e3);
+        $('tlArr').innerHTML = `<span>ARR ${pad2(sta.getUTCHours())}:${pad2(sta.getUTCMinutes())}Z</span> <span class="${late > 0 ? 'late' : late < 0 ? 'early' : ''}">${late ? (late > 0 ? '+' : '−') + Math.abs(late) + ' min' : 'on time'}</span>`;
+      }
+    }
     let ci = -1; nav.forEach((p, i) => { if (p[1] <= el) ci = i; });
     // countdown to the next point refreshes every second; the cards only when we pass a point
     const nx = nav[ci + 1];
