@@ -420,6 +420,7 @@
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
+  .paxsel{height:30px;min-width:46px;border-radius:8px;background:var(--bg);color:var(--text);border:1px solid var(--line);font:inherit;font-size:12px;text-align:center;padding:0 4px}
   .pobl{display:block;margin-top:6px;font-size:10px;color:var(--dim);letter-spacing:.06em}
   .pobl b{display:block;font-size:20px;color:var(--text);font-weight:600;letter-spacing:0}
   .kidrow .kl{margin-right:6px!important}
@@ -945,7 +946,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.12';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.13';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1776,6 +1777,10 @@
     // Nav log points (Timeline). Two lines per point:
     //  POSN [FREQ] ACTM ZTM ATA AFL ETA OAT ADN AWIND TAS VWS ZFRQ AFRM
     //  COORD MSA DIS PFL RETA IMT PDN FWIND GSP DRM PFRM DIFF   — fields can be blank (FIR boundaries, EDTO points, TOC/TOD)
+    if (!o.actype){
+      const all = (o._lines || []).map(x => x.l).join(' '), m = all.match(/\bB777-(\d{3}[A-Z]{0,2})\b/), i = all.match(/-B77(W|L)\//);
+      o.actype = m ? 'B777-' + m[1] : i ? (i[1] === 'W' ? 'B777-300ER' : 'B777-200F') : null;
+    }
     if (!o.firN){   // FIR names from the OFP's "FIR Info" list, e.g. "01.39 VOMF - Chennai IGREX India"
       const fn = {}, countries = new Set(['Malaysia','Singapore','Indonesia','Thailand','India','Pakistan','Afghanistan','China','Japan','Korea','Vietnam','Myanmar','Bangladesh','Australia','Philippines']);
       const rows = [];
@@ -1901,12 +1906,12 @@
     const brief = !!ofp.brief;
     // PAX (4 cabins, editable, shows change from the default) and cabin crew names — saved per OFP
     const PAX_DEF = [4, 48, 28, 184];
-    const pax = ((ofp.pax || {})[e.id]) || PAX_DEF.slice();
+    const pax = (((ofp.pax || {})[e.id]) || PAX_DEF.slice()).slice(); while (pax.length < 6) pax.push(0); if (pax.length < 8){ pax[6] = 2; pax[7] = 15; }
     const kid = i => { const v = pax[i] ?? '0'; return `<input class="paxin${+v ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="${['Child', 'Infant', 'Crew'][i - 4]}">`; };
     // POB = the four cabin figures + infants + crew (children are already counted in the cabin figures)
-    const pob = pp => [0, 1, 2, 3, 5, 6].reduce((a, i) => a + (parseInt(pp[i], 10) || 0), 0);
+    const pob = pp => [0, 1, 2, 3, 5, 6, 7].reduce((a, i) => a + (parseInt(pp[i], 10) || 0), 0);
     const dlt = (v, i) => { const n = parseInt(v, 10); if (isNaN(n) || n === PAX_DEF[i]) return ''; const d = n - PAX_DEF[i]; return (d > 0 ? '+' : '−') + Math.abs(d); };
-    const paxV = `<span class="paxrow">${pax.slice(0, 4).map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span><span class="kidrow"><span class="kl">Child</span>${kid(4)}<span class="paxsep">/</span><span class="kl">Inf.</span>${kid(5)}</span><span class="kidrow"><span class="kl">Crew</span>${kid(6)}</span>`;
+    const paxV = `<span class="paxrow">${pax.slice(0, 4).map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span><span class="kidrow"><span class="kl">Child</span>${kid(4)}<span class="paxsep">/</span><span class="kl">Inf.</span>${kid(5)}</span><span class="kidrow"><span class="kl">Crew</span><select class="paxsel" data-pax="6" data-id="${e.id}" aria-label="Flight crew">${[2,3,4,5,6,7,8,9,10].map(n => `<option${+pax[6] === n ? ' selected' : ''}>${n}</option>`).join('')}</select><span class="paxsep">/</span><input class="paxin${+pax[7] !== 15 ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="7" data-id="${e.id}" value="${ofpEsc(pax[7])}" aria-label="Cabin crew"></span>`;
     if (!ofp.crewAll) ofp.crewAll = Object.assign({}, (ofp.crew || {})[e.id]);   // crew names stay when a new OFP is loaded
     const crew = ofp.crewAll;
     const cin = (k, ph) => `<input class="crewin" data-crew="${k}" data-id="${e.id}" value="${ofpEsc(crew[k] || '')}" placeholder="${ph}" autocapitalize="words" autocomplete="off" spellcheck="false">`;
@@ -1995,12 +2000,15 @@
       if (why.length) burnV += why.map(w => `<span class="calc">${w}</span>`).join('');
     }
     // Vref30 table (weight bands in T) → Vref+5 and how much weight can come off before it drops 1kt
-    const VREF30 = [[149,248.3],[148,244.9],[147,241.5],[146,238.2],[145,234.9],[144,231.6],[143,228.4],[142,225.1],[141,221.9],[140,218.7],[139,215.6],[138,212.5],[137,209.4],[136,206.3],[135,203.3]];
+    // Vref30 by landing weight band (lower bound, T). 777F table used when the OFP is a B777-200F, otherwise the 300ER one.
+    const VREF_77W = {max: 251.2, rows: [[149,248.3],[148,244.9],[147,241.5],[146,238.2],[145,234.9],[144,231.6],[143,228.4],[142,225.1],[141,221.9],[140,218.7],[139,215.6],[138,212.5],[137,209.4],[136,206.3],[135,203.3]]};
+    const VREF_77F = {max: 260.8, rows: [[150,260.7],[149,257.2],[148,253.8],[147,250.3],[146,246.9],[145,243.5],[144,240.2],[143,236.8],[142,233.5],[141,230.2],[140,227.0],[139,223.7],[138,220.5],[137,217.3],[136,152.0]]};
+    const VT = /200F|77F/.test(d.actype || '') ? VREF_77F : VREF_77W, VREF30 = VT.rows;
     let vrefV = '';
     if (ldw != null){
       const band = VREF30.find(([, lo]) => ldw >= lo);
-      if (ldw > 251.2) vrefV = `<span class="vref"><span class="kl">Vref+5</span><span class="dimtxt">above table (max 251.2T)</span></span>`;
-      else if (!band) vrefV = `<span class="vref"><span class="kl">Vref+5</span><span class="dimtxt">below table (min 203.3T)</span></span>`;
+      if (ldw > VT.max) vrefV = `<span class="vref"><span class="kl">Vref+5</span><span class="dimtxt">above table (max ${VT.max.toFixed(1)}T)</span></span>`;
+      else if (!band) vrefV = `<span class="vref"><span class="kl">Vref+5</span><span class="dimtxt">below table (min ${VREF30[VREF30.length - 1][1].toFixed(1)}T)</span></span>`;
       else {
         const v5 = band[0] + 5, buf = Math.round((ldw - band[1]) * 10) / 10;
         const col = v5 >= 150 ? 'var(--red)' : v5 <= 139 ? 'var(--amber)' : 'var(--green)';
@@ -2394,12 +2402,14 @@
   }
   $('ofpOut').addEventListener('input', ev => {
     const t = ev.target;
-    if (t.matches('.paxin')){
+    if (t.matches('.paxin, .paxsel')){
       t.value = t.value.replace(/\D/g, '').slice(0, 3);
-      const id = t.dataset.id, i = +t.dataset.pax, DEF = [4, 48, 28, 184, 0, 0, 0];
-      ofp.pax = ofp.pax || {}; const p = ofp.pax[id] || DEF.slice(); while (p.length < 7) p.push(0); p[i] = t.value; ofp.pax[id] = p; store.set('ofp', ofp);
-      const pv = $('pobV'); if (pv) pv.textContent = [0, 1, 2, 3, 5, 6].reduce((a, k) => a + (parseInt(p[k], 10) || 0), 0);
+      const id = t.dataset.id, i = +t.dataset.pax, DEF = [4, 48, 28, 184, 0, 0, 2, 15];
+      ofp.pax = ofp.pax || {}; const p = ofp.pax[id] || DEF.slice(); while (p.length < 6) p.push(0); if (p.length < 8){ p[6] = 2; p[7] = 15; } p[i] = t.value; ofp.pax[id] = p; store.set('ofp', ofp);
+      const pv = $('pobV'); if (pv) pv.textContent = [0, 1, 2, 3, 5, 6, 7].reduce((a, k) => a + (parseInt(p[k], 10) || 0), 0);
+      if (t.matches('.paxsel')) return;
       const n = parseInt(t.value, 10), d = isNaN(n) ? 0 : n - DEF[i];
+      if (i === 7){ t.classList.toggle('chg', n !== 15); return; }
       const lab = t.parentElement.querySelector('.paxd'); if (lab) lab.textContent = d ? (d > 0 ? '+' : '−') + Math.abs(d) : '';
       t.classList.toggle('chg', !!d);
     } else if (t.matches('.crewin')){
