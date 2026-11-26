@@ -413,6 +413,8 @@
   .tlfw > div{display:flex;flex-direction:column;align-items:center;padding:2px 0;border-radius:6px;line-height:1.25}
   .tlfw > div.on{background:rgba(88,166,255,.14)}
   .tlfw .tlk{font-size:9px}
+  .tlfw .hw{color:#ff9b8a} .tlfw .tw{color:#7ee08a}
+  .tlfw small{font-size:.85em;color:var(--dim)}
   .tlr.past{display:none}
   .tladjg{color:var(--green)}
   .tlfir{margin-left:5px;white-space:nowrap}
@@ -950,7 +952,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.15';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.16';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2243,7 +2245,13 @@
   function tlFw(p){
     const e = ofp.recent.find(r => r.id === ofp.cur), fw = e && e.data.fwind && e.data.fwind[p[0]];
     if (!fw) return '';
-    return `<div class="tlfw">${fw.map(([fl, wd, ws, t]) => `<div class="${String(fl) === p[2] ? 'on' : ''}"><span class="tlk">FL${fl}</span><span>${String(wd === 0 ? 360 : wd).padStart(3, '0')}/${ws}</span><span>${t < 0 ? '−' : '+'}${Math.abs(t)}°</span></div>`).join('')}</div>`;
+    const sg = n => (n < 0 ? '−' : '+') + Math.abs(n);
+    return `<div class="tlfw">${fw.map(([fl, wd, ws, t]) => {
+      const c = p[3] != null ? Math.round(ws * Math.cos((wd - p[3]) * Math.PI / 180)) : null;   // + = headwind on this point's track
+      const alt = fl * 100, isa = Math.round(t - (alt < 36089 ? 15 - 0.0019812 * alt : -56.5));
+      return `<div class="${String(fl) === p[2] ? 'on' : ''}"><span class="tlk">FL${fl}</span><span>${String(wd === 0 ? 360 : wd).padStart(3, '0')}/${ws}</span>`
+        + (c != null ? `<span class="${c > 0 ? 'hw' : c < 0 ? 'tw' : ''}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${Math.abs(c)}</span>` : '')
+        + `<span>${sg(t)}° <small>${sg(isa)}</small></span></div>`; }).join('')}</div>`;
   }
   function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
