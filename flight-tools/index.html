@@ -425,7 +425,7 @@
   .tlr.past.x{color:var(--dim)}
   .tlr.now{background:rgba(245,165,36,.18);font-weight:600}
   .tlr.next{background:rgba(88,166,255,.12)}
-  .ofpf.stdf .v b{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+  .ofpf.stdf .v b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
   .ofpf.stdf .v b.early{color:var(--green)} .ofpf.stdf .v b.late{color:var(--red)}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
@@ -959,7 +959,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.20';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.21';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2596,8 +2596,8 @@
     let ms = dm && MON[dm[2]] != null ? Date.UTC(2000 + +dm[3], MON[dm[2]], +dm[1], +std.slice(0, 2), +std.slice(2))
                                       : Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), +std.slice(0, 2), +std.slice(2));
     if (!dm){ if (ms - Date.now() > 12 * 3600e3) ms -= 864e5; else if (Date.now() - ms > 12 * 3600e3) ms += 864e5; }
-    const min = Math.floor(Math.abs(Date.now() - ms) / 60e3), before = Date.now() < ms, h = Math.floor(min / 60);
-    v.textContent = (before ? '−' : '+') + (h >= 48 ? Math.floor(h / 24) + 'd ' + pad2(h % 24) : pad2(h)) + ':' + pad2(min % 60);
+    const sec = Math.floor(Math.abs(Date.now() - ms) / 1000), before = Date.now() < ms;
+    v.textContent = (before ? '−' : '+') + pad2(Math.floor(sec / 3600)) + ':' + pad2(Math.floor(sec / 60) % 60) + ':' + pad2(sec % 60);
     v.className = before ? 'early' : 'late'; $('stdK').textContent = before ? 'To STD' : 'After STD';
   }
   setInterval(() => { if ($('view-ofp').classList.contains('active')) stdTick(); }, 1000);
