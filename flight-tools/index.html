@@ -425,10 +425,15 @@
   .tlr.past.x{color:var(--dim)}
   .tlr.now{background:rgba(245,165,36,.18);font-weight:600}
   .tlr.next{background:rgba(88,166,255,.12)}
+  .ofpf.stdf .v b{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+  .ofpf.stdf .v b.early{color:var(--green)} .ofpf.stdf .v b.late{color:var(--red)}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
   .landrow > span{display:inline-flex;align-items:center;white-space:nowrap}
   .kidrow{display:flex;align-items:center;gap:2px;margin-top:6px}
   .paxsel{height:30px;min-width:46px;border-radius:8px;background:var(--bg);color:var(--text);border:1px solid var(--line);font:inherit;font-size:12px;text-align:center;padding:0 4px}
+  .scanb{display:inline-block;margin-top:6px;cursor:pointer}
+  #crewMsg,#paxMsg{font-size:11px;color:var(--dim);line-height:1.3;display:block}
+  .crewhd .scanb{margin-top:0}
   .pobl{display:block;margin-top:6px;font-size:10px;color:var(--dim);letter-spacing:.06em}
   .pobl b{display:block;font-size:20px;color:var(--text);font-weight:600;letter-spacing:0}
   .kidrow .kl{margin-right:6px!important}
@@ -954,7 +959,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.19';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.20';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1936,7 +1941,7 @@
     const cin = (k, ph) => `<input class="crewin" data-crew="${k}" data-id="${e.id}" value="${ofpEsc(crew[k] || '')}" placeholder="${ph}" autocapitalize="words" autocomplete="off" spellcheck="false">`;
     // Crew: labels sit under "CREW" in the left column, so the boxes get the full right column
     const crewRow = (lab, inner) => `<div class="k crewk">${lab}</div><div class="v crewv">${inner}</div>`;
-    const crewHtml = `<div class="ofpf crewf"><div class="k crewhd">Crew <button class="crewclr" id="crewClr">Clear</button></div><div></div>
+    const crewHtml = `<div class="ofpf crewf"><div class="k crewhd">Crew <button class="crewclr" id="crewClr">Clear</button><label class="crewclr scanb">Scan<input type="file" accept="image/*" data-scan="crew" hidden></label></div><div class="calc" id="crewMsg"></div>
       ${crewRow('IFM', cin('ifm', ''))}
       ${crewRow('CS', cin('chief', ''))}
       ${crewRow('LS', cin('ls1', ''))}
@@ -1944,7 +1949,7 @@
       ${crewRow('LSS', cin('lss1', ''))}
       ${crewRow('LSS', cin('lss2', ''))}</div>`;
     const hlB = v => brief ? `<span class="hlv">${v}</span>` : v;   // BRIEF highlight
-    $('ofpBrief').style.display = ''; $('ofpBrief').classList.toggle('on', brief);
+    $('ofpBrief').style.display = ''; $('ofpBrief').classList.toggle('on', brief); setTimeout(() => { try{ stdTick(); }catch(x){} }, 0);
     $('ofpTl').style.display = ''; $('ofpTl').classList.toggle('on', !!ofp.tlv);
     if (ofp.tlv){ tlRender(e); return; }
     const planNo = plan ? String(plan).replace(/^(PLAN|OFP)\s*/i, '') : null;
@@ -2074,6 +2079,7 @@
     box.innerHTML = `
       <div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}${planNo ? ' · PLAN ' + ofpEsc(planNo) : ''}</span></div>
       <div class="ofpgrid">
+        ${d.std ? `<div class="ofpf stdf"><div class="k" id="stdK">To STD</div><div class="v"><b id="stdV">--:--</b></div></div>` : ''}
         ${ofpField('Flight', flt || h.depI ? [flt ? hlB(ofpEsc(flt.replace(/\s+/g, ''))) : '', h.depI ? hlB(ofpEsc(h.depI + '-' + h.arrI)) : (d.dep ? hlB(ofpEsc(d.dep + '-' + d.arr)) : '')].filter(Boolean).join(' ') : null)}
         ${ofpField('Reg · APD', ([reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>') || null) && [reg, d.apd].filter(Boolean).map(ofpEsc).join('<span class="sep">·</span>'))}
         ${ofpField('STD · STA', d.std || d.sta ? `${hhmmZ(d.std) || '—'}<span class="sep">→</span>${hhmmZ(d.sta) || '—'}${blk != null ? `<span class="br">(${hm(blk)})</span>` : ''}` : null)}
@@ -2092,7 +2098,7 @@
             : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
           : null, false, 'route')}
         <div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}</div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>
-        ${ofpField(`PAX<span class="pobl">POB <b id="pobV">${pob(pax)}</b></span>`, paxV)}
+        ${ofpField(`PAX<span class="pobl">POB <b id="pobV">${pob(pax)}</b></span><label class="crewclr scanb">Scan<input type="file" accept="image/*" data-scan="pax" hidden></label>`, paxV + '<span class="calc" id="paxMsg"></span>', false, 'paxf')}
         ${crewHtml}
       </div>`;
     // Steppers (PZFW, excess, landing fuel). Typed values are saved as you type, and −/+ always step from
@@ -2287,7 +2293,7 @@
     const to = tlToMs(e), toV = to ? tlZ(to.ms) : '';
     box.innerHTML = `<div class="tltop">
         <div class="tlclk"><span class="tlk">UTC</span><b id="tlUtc">--:--:--</b></div>
-        <div class="tlclk"><span class="tlk">Since T/O</span><b id="tlEl">--:--:--</b></div>
+        <div class="tlclk"><span class="tlk" id="tlElK">Since T/O</span><b id="tlEl">--:--:--</b></div>
         <div class="tlclk"><span class="tlk">To LDG</span><b id="tlRem">--:--</b><span class="tlarr" id="tlArr"></span></div>
       </div>
       <div class="tlto"><span class="tlk">T/O</span>
@@ -2345,7 +2351,7 @@
     $('tlUtc').textContent = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds());
     const to = tlToMs(e); if (!to){ $('tlEl').textContent = '--:--:--'; return; }
     const sec = (now - to.ms) / 1000, el = sec / 60, nav = e.data.nav.map(p => { const q = p.slice(); q[1] += adj; return q; }), rep = tlRep(e);
-    $('tlEl').textContent = tlHMS(sec);
+    $('tlEl').textContent = tlHMS(sec); $('tlElK').textContent = sec < 0 ? 'To T/O' : 'Since T/O';
     // To LDG: OFP flight time (+ ADJ) minus time since T/O; vs schedule: actual T/O against STD + taxi, plus ADJ (same block time)
     const od = e.data, ftM = od.ft ? (+od.ft.split('.')[0]) * 60 + (+od.ft.split('.')[1]) : null;
     if (ftM != null){
@@ -2470,6 +2476,68 @@
     if (t.value === '' && t.dataset.prev != null){ t.value = t.dataset.prev; t.dispatchEvent(new Event('input', {bubbles: true})); }
     t.placeholder = '';
   });
+  // ---------- Scans: crew list and passenger load screenshots (same offline text reader)
+  async function ocPrepBright(file, thr){   // white text on coloured/dark cards → black on white, everything else dropped
+    const img = await createImageBitmap(file), k = Math.min(2.5, Math.max(1, 2400 / img.width));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, c.width, c.height);
+    const px = g.getImageData(0, 0, c.width, c.height), a = px.data;
+    for (let i = 0; i < a.length; i += 4){ const y = Math.min(a[i], a[i+1], a[i+2]); a[i] = a[i+1] = a[i+2] = y > thr ? 0 : 255; }
+    g.putImageData(px, 0, 0); return c;
+  }
+  async function ocLines(file, thr){
+    const [w, c] = await Promise.all([loadOcr(), thr ? ocPrepBright(file, thr) : ocPrep(file)]);
+    const { data } = await w.recognize(c, {}, { text: true, blocks: true });
+    const lines = (data.blocks || []).flatMap(b => b.paragraphs.flatMap(p => p.lines)).map(l => ({t: l.text.trim(), b: l.bbox, w: l.words.map(x => ({t: x.text.trim(), b: x.bbox}))}));
+    return {lines, text: data.text, W: c.width, H: c.height};
+  }
+  // Crew: each person is a name with an 8-digit staff number under it, in two columns. First 6 in reading order:
+  //   1 2 / 3 4 / 5 6  →  IFM, CS, LS, LS, LSS, LSS
+  function crewParse({lines, W, H}){
+    const mid = W * 0.62, out = [];
+    const clean = ws => { const w = ws.map(x => x.t.replace(/[|©®@°•·_~"“”()\[\]{}]/g, '')).filter(Boolean);
+      while (w.length && !/^[A-Z][A-Za-z'’-]*[a-z]/.test(w[0])) w.shift(); while (w.length && !/[a-z]/.test(w[w.length - 1])) w.pop(); return w.join(' '); };
+    lines.filter(l => l.b.y0 > H * 0.1 && (l.b.x0 > W * 0.25 || l.w.some(x => x.b.x0 > W * 0.5))).sort((a, b) => a.b.y0 - b.b.y0).forEach(l => {
+      const ws = l.w.filter(x => x.b.x0 > W * 0.26);
+      const L = clean(ws.filter(x => x.b.x0 < mid)), R = clean(ws.filter(x => x.b.x0 >= mid));
+      [L, R].forEach(n => { if (n && n.split(' ').length >= 2 && /[a-z]/.test(n)) out.push(n); });
+    });
+    return out;
+  }
+  // Passenger load: each card reads "occupied / seats · adult · child · infant"; top card = TOTAL, then F, J, S, Y.
+  // Columns are found by position (the "/ seats" part often doesn't read cleanly).
+  function paxParse({lines, W}){
+    const num = t => { const m = t.replace(/[^\d]/g, ''); return m === '' ? null : +m; };
+    const at = (l, lo, hi) => { const x = l.w.find(x => { const c = (x.b.x0 + x.b.x1) / 2; return c >= W * lo && c <= W * hi && /\d/.test(x.t); }); return x ? num(x.t) : null; };
+    const rows = lines.filter(l => l.w.some(x => x.b.x0 > W * 0.28)).map(l => ({y: l.b.y0, occ: at(l, 0.28, 0.37), child: at(l, 0.57, 0.66), inf: at(l, 0.72, 0.81)}))
+      .filter(r => r.occ != null && r.child != null && r.inf != null).sort((a, b) => a.y - b.y);
+    if (rows.length < 2) return null;
+    const tot = rows[0], cls = rows.slice(1, 5).map(r => r.occ);
+    return {cls: cls.length === 4 ? cls : [0, ...cls].slice(-4), child: tot.child, inf: tot.inf};
+  }
+  // Passenger load: rows of "occupied / seats  adult  child  infant"; the top one is the TOTAL, then F, J, S, Y
+  async function scanFile(kind, file){
+    const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
+    const say = t => { const m = $(kind === 'crew' ? 'crewMsg' : 'paxMsg'); if (m) m.textContent = t; };
+    say('Reading screenshot…');
+    try{
+      const r = await ocLines(file, 170);
+      if (kind === 'crew'){
+        const names = crewParse(r);
+        if (!names.length){ say('Couldn’t find any names with staff numbers in that picture.'); return; }
+        const keys = ['ifm', 'chief', 'ls1', 'ls2', 'lss1', 'lss2'];
+        ofp.crewAll = Object.assign({}, ofp.crewAll); keys.forEach((k, i) => { if (names[i]) ofp.crewAll[k] = names[i]; });
+        store.set('ofp', ofp); ofpRender(); say(`Filled ${Math.min(6, names.length)} names — please check them.`);
+      } else {
+        const p = paxParse(r);
+        if (!p){ say('Couldn’t find the passenger figures in that picture.'); return; }
+        ofp.pax = ofp.pax || {}; const cur = (ofp.pax[e.id] || [4, 48, 28, 184, 0, 0, 2, 15]).slice(); while (cur.length < 8) cur.push(cur.length === 6 ? 2 : cur.length === 7 ? 15 : 0);
+        p.cls.forEach((v, i) => cur[i] = String(v)); cur[4] = String(p.child); cur[5] = String(p.inf);
+        ofp.pax[e.id] = cur; store.set('ofp', ofp); ofpRender(); say(`Filled ${p.cls.join('/')} · child ${p.child} · inf ${p.inf} — please check.`);
+      }
+    }catch(err){ say('Couldn’t read the picture: ' + (err.message || err)); }
+  }
+
   async function ocFromFile(id, file){
     const msg = t => { const m = $('ocMsg'); if (m) m.textContent = t; };
     msg('Reading screenshot… (the first time takes a few seconds)');
@@ -2481,6 +2549,8 @@
     }catch(err){ msg('Couldn’t read the picture: ' + (err.message || err)); }
   }
   $('ofpOut').addEventListener('change', ev => {
+    const sc = ev.target.closest('input[data-scan]');
+    if (sc && sc.files && sc.files[0]){ const f = sc.files[0]; sc.value = ''; scanFile(sc.dataset.scan, f); return; }
     const inp = ev.target.closest('input[data-oc]'); if (!inp || !inp.files || !inp.files[0]) return;
     const id = inp.dataset.oc, file = inp.files[0]; inp.value = '';
     ocFromFile(id, file);
@@ -2511,9 +2581,26 @@
       const src = (html.match(/<img[^>]+src=["']([^"']+)/i) || [])[1] || (/^(data:image|blob:|https?:)/.test(uri) ? uri : '');
       if (src){ try{ const r = await fetch(src); const bl = await r.blob(); if (bl.type.startsWith('image/')) file = bl; }catch(e){} }
     }
-    if (file) ocFromFile(id, file);
+    const zone = ev.target.closest && ev.target.closest('.paxf, .crewf');
+    if (file && zone) scanFile(zone.classList.contains('crewf') ? 'crew' : 'pax', file);
+    else if (file) ocFromFile(id, file);
     else ocMsg(`Couldn’t get the picture from that drag (got: ${[...(dt.types || [])].join(', ') || 'nothing'}). Use the button instead.`);
   });
+  // TO STD / AFTER STD: counts to the OFP's STD (UTC, on the OFP date), green before, red after
+  const MON = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+  function stdTick(){
+    const v = $('stdV'); if (!v) return;
+    const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
+    const d = e.data, std = d.std && /^\d{4}$/.test(d.std) ? d.std : null; if (!std) return;
+    const dm = (d.date || '').match(/^(\d{2})([A-Z]{3})(\d{2})$/), now = new Date();
+    let ms = dm && MON[dm[2]] != null ? Date.UTC(2000 + +dm[3], MON[dm[2]], +dm[1], +std.slice(0, 2), +std.slice(2))
+                                      : Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), +std.slice(0, 2), +std.slice(2));
+    if (!dm){ if (ms - Date.now() > 12 * 3600e3) ms -= 864e5; else if (Date.now() - ms > 12 * 3600e3) ms += 864e5; }
+    const min = Math.floor(Math.abs(Date.now() - ms) / 60e3), before = Date.now() < ms, h = Math.floor(min / 60);
+    v.textContent = (before ? '−' : '+') + (h >= 48 ? Math.floor(h / 24) + 'd ' + pad2(h % 24) : pad2(h)) + ':' + pad2(min % 60);
+    v.className = before ? 'early' : 'late'; $('stdK').textContent = before ? 'To STD' : 'After STD';
+  }
+  setInterval(() => { if ($('view-ofp').classList.contains('active')) stdTick(); }, 1000);
   ofpRender();
 
   // keep in step with the PA tab's Departure / Destination
