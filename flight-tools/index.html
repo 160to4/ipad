@@ -501,7 +501,7 @@
   #ldgPA .unit,#ldgPA .aptname,#ldgPA #paNowZone{font-size:11px !important}
   #ldgPA .big2,#ldgPA .parow .out,#ldgPA #paTf{font-size:13px !important}
   #ldgPA .parow .btn.small{min-height:32px;height:32px;font-size:11px}
-  #ldgPA #paLandOut{flex-basis:100%;margin-left:0;text-align:left}
+  #ldgPA #paLandOut{margin:0 8px 0 0;text-align:left}
   #ldgPA #paDiff{font-size:10px !important}
   #ldgPA .captl{display:flex;align-items:center;gap:8px;flex-basis:100%}
   #ldgPA .capt{font-size:10px !important}
@@ -606,6 +606,17 @@
   body.compact .rvrow{padding:5px 10px;font-size:17px}
   .cmode{margin-bottom:10px}
   .cmode button{font-size:13px}
+  .cfrow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px}
+  .cfrow .tlk{font-size:11px}
+  .cfc{display:flex;align-items:center;gap:6px}
+  #curfewPanel .cfc .btn{flex:none;width:32px;min-width:0;min-height:0;height:32px;padding:0;font-size:16px}
+  #curfewPanel .num.t24{width:76px;height:32px;font-size:16px;text-align:center}
+  .cfv{min-width:76px;text-align:center;font-size:16px;font-weight:500;font-variant-numeric:tabular-nums}
+  .cfv.cfo{text-align:right;font-weight:600}
+  .cfv.mag{color:var(--mag)}
+  #curfewPanel .num.chg{border-color:var(--amber);color:var(--amber)}
+  .cfv small{display:block;font-size:11px;color:var(--dim);font-weight:400}
+  .cfhr{border:0;border-top:1px solid var(--line);margin:6px 0}
   .dgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .dgrid label{display:flex;flex-direction:column;gap:4px}
   .dgrid .num{width:100%;min-width:0;text-align:center;font-size:22px;height:48px}
@@ -775,7 +786,21 @@
       <button data-m="rest">Rest</button>
       <button data-m="num" class="on">Calculator</button>
       <button data-m="time">Time</button>
+      <button data-m="curfew">Curfew</button>
       <button data-m="drift">Drift</button>
+    </div>
+    <div id="curfewPanel" class="card" hidden>
+      <div class="row" style="justify-content:space-between;margin-bottom:6px"><div class="label">Curfew</div><button class="btn small ghost" id="cfReset">Reset</button></div>
+      <div class="cfrow"><span class="tlk">Chocks-on</span><span class="cfc"><button class="btn small" data-cf="on" data-d="-1">−</button><input class="num t24" id="cfOn" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off"><span class="unit">Z</span><button class="btn small" data-cf="on" data-d="1">+</button></span></div>
+      <div class="cfrow"><span class="tlk">No chocks-on before</span><span class="cfc"><button class="btn small" data-cf="gap" data-d="-5">−</button><b class="cfv" id="cfGap"></b><button class="btn small" data-cf="gap" data-d="5">+</button></span></div>
+      <hr class="cfhr">
+      <div class="cfrow"><span class="tlk">Earliest chocks-on</span><b class="cfv cfo" id="cfEon"></b></div>
+      <div class="cfrow"><span class="tlk">Taxi-in</span><span class="cfc"><button class="btn small" data-cf="tin" data-d="-1">−</button><b class="cfv" id="cfTin"></b><button class="btn small" data-cf="tin" data-d="1">+</button></span></div>
+      <div class="cfrow"><span class="tlk">Flight time</span><span class="cfc"><button class="btn small" data-cf="ft" data-d="-1">−</button><input class="num t24" id="cfFt" inputmode="numeric" maxlength="5" placeholder="H:MM" autocomplete="off"><button class="btn small" data-cf="ft" data-d="1">+</button></span></div>
+      <div class="cfrow"><span class="tlk">Taxi-out</span><span class="cfc"><button class="btn small" data-cf="tout" data-d="-1">−</button><b class="cfv" id="cfTout"></b><button class="btn small" data-cf="tout" data-d="1">+</button></span></div>
+      <hr class="cfhr">
+      <div class="cfrow"><span class="tlk">Earliest chocks-off</span><b class="cfv cfo" id="cfOff"></b></div>
+      <div class="cfrow"><span class="tlk">Delay required</span><b class="cfv cfo" id="cfDelay"></b></div>
     </div>
     <div id="driftPanel" class="card" hidden>
       <div class="label" style="margin-bottom:10px">Heading from track and wind</div>
@@ -942,9 +967,9 @@
       <div class="parow">
         <div class="k">Landing</div>
         <div class="ctl">
-          <input class="num t24" id="paLand" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off"><span class="unit">UTC</span>
-          <input class="num" id="paTaxi" inputmode="numeric" pattern="[0-9]*" placeholder="0"><span class="unit">min taxi</span>
+          <input class="num t24" id="paLand" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" hidden>
           <div class="out" id="paLandOut"></div>
+          <input class="num" id="paTaxi" inputmode="numeric" pattern="[0-9]*" placeholder="0"><span class="unit">min taxi</span>
         </div>
       </div>
 
@@ -1061,7 +1086,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.32';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.33';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1386,7 +1411,8 @@
     document.querySelectorAll('#calcMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
     const dot = document.querySelector('#calcKeys [data-k="."]'), pc = document.querySelector('#calcKeys [data-k="%"]');
     dot.textContent = m === 'time' ? ':' : '.'; pc.disabled = m === 'time';
-    $('restPanel').hidden = m !== 'rest'; $('driftPanel').hidden = m !== 'drift'; $('calcPanel').hidden = m === 'rest' || m === 'drift';
+    $('restPanel').hidden = m !== 'rest'; $('driftPanel').hidden = m !== 'drift'; $('curfewPanel').hidden = m !== 'curfew'; $('calcPanel').hidden = m === 'rest' || m === 'drift' || m === 'curfew';
+    if (m === 'curfew' && window.fdtCfDraw) window.fdtCfDraw();
     if (m === 'rest'){ try{ crCalc(); }catch(e){} } else calcShow();
     requestAnimationFrame(() => { if (typeof fit === 'function') fit(); });
   };
@@ -1413,12 +1439,55 @@
     }
     draw();
   })();
+  // Curfew: latest-allowed arrival → earliest chocks-off and delay needed
+  (function(){
+    const DEF = {on: null, gap: 30, tin: 5, ft: null, tout: 15};
+    const cf = Object.assign({}, DEF, store.get('curfew', {}));
+    const save = () => store.set('curfew', cf);
+    const ofpC = () => store.get('crOfp', {});
+    const hhmm = t => t == null ? null : pad2(Math.floor(((t % 1440) + 1440) % 1440 / 60)) + ':' + pad2(((t % 1440) + 1440) % 1440 % 60);
+    const dur = m => m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + pad2(m % 60) + ' min' : '');
+    const sta = () => { const c = ofpC(); return c.sta && /^\d{4}$/.test(c.sta) ? +c.sta.slice(0, 2) * 60 + +c.sta.slice(2) : null; };
+    const std = () => { const c = ofpC(); return c.std && /^\d{4}$/.test(c.std) ? +c.std.slice(0, 2) * 60 + +c.std.slice(2) : null; };
+    const onV = () => cf.on != null ? cf.on : sta();
+    const ftV = () => cf.ft != null ? cf.ft : (ofpC().ft != null ? ofpC().ft : null);
+    function draw(){
+      const on = onV(), ft = ftV();
+      if (document.activeElement !== $('cfOn')) $('cfOn').value = hhmm(on) || '';
+      if (document.activeElement !== $('cfFt')) $('cfFt').value = ft != null ? Math.floor(ft / 60) + ':' + pad2(ft % 60) : '';
+      $('cfOn').classList.toggle('chg', cf.on != null); $('cfFt').classList.toggle('chg', cf.ft != null);
+      $('cfGap').textContent = dur(cf.gap); $('cfTin').textContent = cf.tin + ' min'; $('cfTout').textContent = cf.tout + ' min';
+      const eon = on != null ? on - cf.gap : null;
+      $('cfEon').textContent = eon != null ? hhmm(eon) + 'Z' : '—';
+      const off = eon != null && ft != null ? eon - cf.tin - ft - cf.tout : null;
+      $('cfOff').textContent = off != null ? hhmm(off) + 'Z' : '—';
+      const sd = std(), dl = $('cfDelay'); dl.classList.remove('mag');
+      if (off == null || sd == null){ dl.innerHTML = off == null ? '—' : '<small>no STD — open an OFP</small>'; return; }
+      let d = ((off - sd) % 1440 + 1440) % 1440; if (d > 720) d -= 1440;
+      if (d > 0){ dl.innerHTML = `${dur(d)}<small>after STD ${hhmm(sd)}Z</small>`; dl.classList.add('mag'); }
+      else dl.innerHTML = `None<small>don't chocks-off before ${hhmm(off)}Z</small>`;
+    }
+    const step = (k, d) => {
+      if (k === 'on'){ const v = onV(); if (v == null) return; cf.on = ((v + d) % 1440 + 1440) % 1440; if (cf.on === sta()) cf.on = null; }
+      else if (k === 'ft'){ const v = ftV(); if (v == null) return; cf.ft = Math.max(0, v + d); if (cf.ft === ofpC().ft) cf.ft = null; }
+      else if (k === 'gap') cf.gap = Math.max(0, cf.gap + d);
+      else cf[k] = Math.max(0, cf[k] + d);
+      save(); draw();
+    };
+    document.querySelectorAll('[data-cf]').forEach(b => b.onclick = () => step(b.dataset.cf, +b.dataset.d));
+    bind24($('cfOn'), v => { if (!v || document.activeElement === $('cfOn')) return; const [h, m] = v.split(':').map(Number); cf.on = h * 60 + m; if (cf.on === sta()) cf.on = null; save(); draw(); });
+    bind24($('cfFt'), v => { if (!v || document.activeElement === $('cfFt')) return; const [h, m] = v.split(':').map(Number); cf.ft = h * 60 + m; if (cf.ft === ofpC().ft) cf.ft = null; save(); draw(); });
+    $('cfReset').onclick = () => { Object.assign(cf, DEF); save(); draw(); };
+    window.fdtCfDraw = draw;
+    window.fdtCfNewOfp = () => { cf.on = null; cf.ft = null; save(); draw(); };
+    draw();
+  })();
   document.querySelectorAll('#calcMode button').forEach(b => b.onclick = () => setCalcMode(b.dataset.m));
   const press = k => calcMode === 'time' ? (k === '%' ? null : tPress(k)) : calcPress(k);
   document.querySelectorAll('#calcKeys .key').forEach(b => b.addEventListener('click', () => press(b.dataset.k)));
   // hardware keyboard support (Magic Keyboard etc.) while the Calc tab is open
   document.addEventListener('keydown', e => {
-    if (!$('view-calc').classList.contains('active') || calcMode === 'rest' || calcMode === 'drift') return;
+    if (!$('view-calc').classList.contains('active') || calcMode === 'rest' || calcMode === 'drift' || calcMode === 'curfew') return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) return;
     const map = {Enter:'=', '=':'=', Backspace:'back', Escape:'C', Delete:'C', 'x':'*', 'X':'*'};
     const k = map[e.key] || (/^[\d.:+\-*/%]$/.test(e.key) ? e.key : null);
@@ -1651,8 +1720,8 @@
     const dOff = destOff(), sOff = depOff();
     if (pa.land && dOff != null){
       const [h,m] = pa.land.split(':').map(Number), loc = h*60 + m + dOff;
-      $('paLandOut').innerHTML = `<small>land</small> ${hm24(loc)}` + (pa.taxi ? ` <small>· gate</small> ${hm24(loc + (+pa.taxi))}` : '') + ' <small>local</small>';
-    } else $('paLandOut').innerHTML = '';
+      $('paLandOut').innerHTML = `${hm24(loc)} <small>local</small>`;
+    } else $('paLandOut').innerHTML = `<small>${pa.land ? 'pick a destination' : 'set on LDG'}</small>`;
     if (dOff != null && sOff != null){
       const diff = dOff - sOff, a = Math.abs(diff), h = Math.floor(a/60), m = a%60, city = SPOKEN[pa.dep] || APT[pa.dep].name;
       const amt = [h ? `${h} hour${h===1?'':'s'}` : '', m ? `${m} minute${m===1?'':'s'}` : ''].filter(Boolean).join(' and ');
@@ -2304,8 +2373,11 @@
     if (!d) return;
     if (d.dep && d.arr) nSet(d.dep, d.arr);   // PA and Notes follow the OFP that's opened or picked
     if (d.ft){ const [h, m] = d.ft.split('.').map(Number); if (!isNaN(h) && !isNaN(m)){ $('crFh').value = h; $('crFm').value = pad2(m); crOfp.ft = h * 60 + m; store.set('crOfp', crOfp); } }
+    if (d.sta && /^\d{4}$/.test(d.sta)){ crOfp.sta = d.sta; store.set('crOfp', crOfp); }
     if (d.std && /^\d{4}$/.test(d.std)){ crOfp.std = d.std; store.set('crOfp', crOfp); crApplyTo(); } else crCalc();
+    if (window.fdtCfNewOfp) window.fdtCfNewOfp();
   }
+  { const e0 = ofp.recent.find(r => r.id === ofp.cur); if (e0 && e0.data.sta && crOfp.sta !== e0.data.sta && /^\d{4}$/.test(e0.data.sta)){ crOfp.sta = e0.data.sta; store.set('crOfp', crOfp); if (window.fdtCfDraw) window.fdtCfDraw(); } }   // STA for Curfew from the open OFP
 
   $('ofpFile').addEventListener('change', async ev => {
     const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
