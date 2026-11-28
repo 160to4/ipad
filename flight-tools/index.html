@@ -344,6 +344,7 @@
   .ofpf.route .hl{color:var(--mag);font-weight:600}
   .ofpf .v .hlv,.ofpf .v .hlv small{color:var(--mag)}
   .ofpf.ocdrop.dragon{border-color:var(--mag);background:#2a0f27;outline:2px dashed var(--mag);outline-offset:-4px}
+  .ocbtn.ock{display:flex;width:max-content;margin:8px 0 0;text-transform:none;letter-spacing:0;font-size:12px;min-height:26px}
   .ocbtn{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;margin-left:8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;vertical-align:middle}
   .ocv{margin-right:4px;font-size:14px;display:inline-block;line-height:1.5}
   .paxrow{display:inline-flex;align-items:flex-end;gap:2px;flex-wrap:wrap}
@@ -425,21 +426,21 @@
   .tlacts{display:flex;gap:8px;padding:6px;border-bottom:1px solid var(--line);background:var(--bg)}
   .tlacts .btn{flex:1;min-height:32px;font-size:12px}
   .tldct{color:var(--mag);font-weight:700}
-  .rtaf .v{font-variant-numeric:tabular-nums}
+  .rtaf .v{font-variant-numeric:tabular-nums;font-size:12px}
   .rtaf .tlto{display:flex;align-items:center;gap:5px;margin:0}
   #ofpOut .rtaf .num.t24{flex:none;width:76px;height:30px;font-size:15px;padding:0 4px}
-  .rtaf .rtato{font-size:16px;font-weight:500}
+  .rtaf .rtato{font-size:12px;font-weight:500}
   .rtaf .k.rtak{cursor:pointer}
   .rtaf .rtach{color:var(--dim);font-size:10px;margin-left:4px}
   .ofpf.rtamin{cursor:pointer}
-  .ofpf.rtamin .v{color:var(--dim);font-size:14px}
+  .ofpf.rtamin .v{color:var(--dim);font-size:12px}
   .ofpf.rtamin .v b{color:var(--text);font-weight:500}
   .ofpgrid > .ofpf.brhide{display:none}
   .rtaf .v{min-width:0}
   .rtawp{position:relative;display:block;width:100%}
-  #ofpOut .rtawp .aptin{width:100%;flex:none;font-size:15px;height:30px;letter-spacing:.04em;box-sizing:border-box;text-align:left;padding:0 10px}
+  #ofpOut .rtawp .aptin{width:100%;flex:none;font-size:12px;height:28px;letter-spacing:.04em;box-sizing:border-box;text-align:left;padding:0 10px}
   .rtaf .tlto{width:100%}
-  #ofpOut .rtaf .num.t24{flex:1 1 auto;width:auto;min-width:0}
+  #ofpOut .rtaf .num.t24{flex:1 1 auto;width:auto;min-width:0;font-size:12px;height:28px}
   .rtagrid b{font-size:16px}
   .rtagrid .tlto{margin:0}
   #ofpOut .rtaf .btn{flex:none;width:30px;min-width:0;height:30px;min-height:0;padding:0;font-size:16px}
@@ -477,24 +478,36 @@
   #ofpBar{flex:0 0 auto;width:100%;max-width:980px;margin:0 auto;padding:10px calc(16px + var(--edge-r) + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));box-sizing:border-box}
   #ofpBar[hidden]{display:none}
   body.compact #ofpBar{padding:6px calc(10px + var(--edge-r)) 0 10px}
-  #ofpBar .card.ofptop{margin:0}
+  #ofpBar .card.ofptop{margin:0;padding:8px 10px}
+  #ofpBar .btn.small,body.compact #ofpBar .btn.small,body.compact #view-ofp #ofpBar .nsyncrow .btn.small{min-height:26px;height:26px;font-size:12px;padding:0 10px}
+  #ofpBar .ofprecent{height:26px !important;font-size:13px !important}
+  #ofpBar .nsyncrow{gap:6px}
+  #ofpBar .ofpmode{margin-top:2px}
+  #ofpBar .ofpmode button,body.compact #ofpBar .ofpmode button{min-height:23px;font-size:11px;padding:1px 0}
+  #ofpBar .brtag{font-size:8px}
   .ldgtop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:4px 0 10px}
   .ldgtop .tlclk b{font-size:24px}
   .ldgset .tlto{margin:0 0 4px}
   #ldgPA > .card{margin-top:0}
-  /* Arrival PA on LDG: everything 40% smaller; boxes/buttons kept tall enough to tap */
-  #ldgPA > .card{zoom:.6}
-  #ldgPA .parow .num,#ldgPA .parow .num.t24,#ldgPA .parow .num.sel{height:52px !important;font-size:18px !important}
-  #ldgPA .parow .num:not(.sel):not(.aptin):not(.name){width:80px}
-  #ldgPA .parow .num.t24{width:110px}
-  #ldgPA .btn{min-height:50px}
-  #ldgPA .parow{grid-template-columns:150px 1fr !important}
-  #ldgPA .parow .k{white-space:nowrap}
+  /* Arrival PA on LDG: compact text */
+  #ldgPA .label{font-size:10px}
+  #ldgPA #paClear,body.compact #ldgPA .card > .row:first-child .btn{font-size:11px;min-height:28px;height:28px;padding:0 10px}
+  #ldgPA .parow{grid-template-columns:92px 1fr !important;padding:6px 0 !important}
+  #ldgPA .parow .k{white-space:nowrap;font-size:9px !important;letter-spacing:.04em}
+  #ldgPA .parow .num,#ldgPA .parow .num.t24,#ldgPA .parow .num.sel{height:32px !important;font-size:14px !important}
+  #ldgPA .parow .num:not(.sel):not(.aptin):not(.name){width:48px}
+  #ldgPA .parow .num.t24{width:66px}
+  #ldgPA .aptin{width:54px}
+  #ldgPA .unit,#ldgPA .aptname,#ldgPA #paNowZone{font-size:11px !important}
+  #ldgPA .big2,#ldgPA .parow .out,#ldgPA #paTf{font-size:13px !important}
+  #ldgPA .parow .btn.small{min-height:32px;height:32px;font-size:11px}
   #ldgPA #paLandOut{flex-basis:100%;margin-left:0;text-align:left}
-  #ldgPA #paDiff{font-size:12px}
+  #ldgPA #paDiff{font-size:10px !important}
   #ldgPA .captl{display:flex;align-items:center;gap:8px;flex-basis:100%}
-  #ldgPA .capt{font-size:13px}
-  #ldgPA .captl .num.name{flex:1;min-width:0;width:auto}
+  #ldgPA .capt{font-size:10px !important}
+  #ldgPA .captl .num.name{flex:1;min-width:0;width:auto;font-size:11px !important}
+  #ldgPA #paRain,#ldgPA #paOther{font-size:12px !important}
+  #ldgPA .parow .say{font-size:13px}
   .ofpf.stdf .v b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
   .ofpf.stdf .v b.early{color:var(--green)} .ofpf.stdf .v b.late{color:var(--red)}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
@@ -1048,7 +1061,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.31';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.32';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2071,10 +2084,10 @@
     const planNo = plan ? String(plan).replace(/^(PLAN|OFP)\s*/i, '') : null;
     // OptiClimb figures read from an eWAS screenshot (per OFP)
     const oc = (ofp.oc || {})[e.id];
-    const ocBtn = `<label class="ocbtn">${oc ? 'Replace' : '📷 Add screenshot'}<input type="file" accept="image/*" data-oc="${e.id}" hidden></label>`;
+    const ocBtn = `<label class="ocbtn${oc ? ' ock' : ''}">${oc ? 'Replace' : '📷 Add screenshot'}<input type="file" accept="image/*" data-oc="${e.id}" hidden></label>`;
     const ocV = (oc ? `<span class="ocv"><span class="kl">TGT SPD</span> ${hlB(ofpEsc(oc.tgt || '—'))}<br><span class="kl">SPD RESTR</span> ${hlB(ofpEsc(oc.restr || '—'))}</span>`
       + (oc.ofpv && plan && !String(oc.ofpv).replace(/^OFP/i, '').startsWith(String(planNo || '').replace(/\D.*$/, '')) ? `<span class="calc" style="color:var(--red)">Screenshot is for ${ofpEsc(oc.ofpv)} — check it matches this OFP</span>` : '')
-      : '') + ocBtn + '<span class="calc" id="ocMsg">or drag a screenshot here</span>';
+      : '') + (oc ? '' : ocBtn) + '<span class="calc" id="ocMsg">or drag a screenshot here</span>';
     const toMin = t => +t.slice(0,2) * 60 + +t.slice(2,4);
     const hm = m => Math.floor(m / 60) + ':' + pad2(m % 60);
     const blk = d.std && d.sta ? ((toMin(d.sta) - toMin(d.std)) + 1440) % 1440 : null;          // block time (annotator: BLK)
@@ -2211,7 +2224,7 @@
         ${ofpField('Excess fuel', xsCtl)}
         ${fitV == null ? ofpField('Fuel in tanks', null) : `<div class="ofpf zfwf"><div class="k">Fuel in tanks</div><div class="v">${fitV}</div><div class="k">Discrepancy</div><div class="v">${fitNowT != null ? `${Math.round(0.005 * fitNowT * 1000 + 1433).toLocaleString('en-US').replace(/,/g, ' ')}<small> KG</small>` : '—'}</div></div>`}
         ${ofpField('Burn +/-', ba)}
-        ${ofpField('OptiClimb', ocV, false, 'ocdrop')}
+        ${ofpField('OptiClimb' + (oc ? ocBtn : ''), ocV, false, 'ocdrop')}
         ${ofpField(`Route${d.route1 || d.route ? `<button class="fmcbtn${ofp.fmc ? ' on' : ''}" id="fmcBtn">FMC</button>` : ''}`, d.route1 || d.route ? (ofp.fmc
             ? `<span class="fmc${brief ? ' br' : ''}">${fmcLegs(d.route1 || d.route).map(([v, w]) => `<span class="via">${ofpEsc(v)}</span><span class="to">${ofpEsc(w)}</span>`).join('')}</span>`
             : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
@@ -2316,11 +2329,16 @@
   $('ofpRecent').addEventListener('change', () => { ofp.cur = $('ofpRecent').value; store.set('ofp', ofp); ofpRender();
     const e = ofp.recent.find(r => r.id === ofp.cur); if (e){ $('ofpMeta').textContent = ''; ofpToRest(e.data); } });
   $('ofpOut').addEventListener('click', ev => { if (ev.target.id === 'fmcBtn'){ ev.preventDefault();
+    ofpKeep(ev.target, '#fmcBtn', () => { ofp.fmc = !ofp.fmc; store.set('ofp', ofp); ofpRender(); }); } });
+  // re-render without the page jumping: keep the tapped thing where it was on screen
+  function ofpKeep(el, sel, fn){
     const sc = [document.querySelector('main'), $('view-ofp')].find(x => x && x.scrollHeight > x.clientHeight + 1 && getComputedStyle(x).overflowY !== 'hidden') || document.querySelector('main');
-    const top0 = sc.scrollTop, y0 = ev.target.getBoundingClientRect().top;
-    ofp.fmc = !ofp.fmc; store.set('ofp', ofp); ofpRender();
-    const fix = () => { sc.scrollTop = top0; const b = $('fmcBtn'); if (b) sc.scrollTop += b.getBoundingClientRect().top - y0; };
-    fix(); requestAnimationFrame(fix); } });
+    const top0 = sc.scrollTop, y0 = el.getBoundingClientRect().top;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    fn();
+    const fix = () => { sc.scrollTop = top0; const b = document.querySelector(sel); if (b) sc.scrollTop += b.getBoundingClientRect().top - y0; };
+    fix(); requestAnimationFrame(fix); setTimeout(fix, 60);
+  }
   $('ofpBrief').onclick = () => { ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpRender(); };
   $('ofpTl').onclick = () => { ofp.tlv = !ofp.tlv; store.set('ofp', ofp); ofpRender(); };
 
@@ -2782,8 +2800,8 @@
     </div>`;
   }
   function rtaBind(e){
-    const mn = $('rtaMin'); if (mn){ mn.onclick = () => { rtaOpen = true; ofpRender(); }; return; }
-    const rk = $('ofpOut').querySelector('.rtaf .rtak'); if (rk) rk.onclick = () => { rtaOpen = false; ofpRender(); };
+    const mn = $('rtaMin'); if (mn){ mn.onclick = ev => { ev.preventDefault(); ofpKeep(mn, '.rtaf', () => { rtaOpen = true; ofpRender(); }); }; return; }
+    const rk = $('ofpOut').querySelector('.rtaf .rtak'); if (rk) rk.onclick = ev => { ev.preventDefault(); ofpKeep(rk.closest('.rtaf'), '.rtaf', () => { rtaOpen = false; ofpRender(); }); };
     const inp = $('rtaWp'); if (!inp) return;
     const sug = $('rtaSug'), nav = e.data.nav;
     const pick = i => { ofp.rta = ofp.rta || {}; ofp.rta[e.id] = {i}; store.set('ofp', ofp); ofpRender(); };
