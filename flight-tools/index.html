@@ -418,6 +418,11 @@
   .tlfw .hw{color:#ff9b8a} .tlfw .tw{color:#7ee08a}
   .tlfw small{font-size:.85em;color:var(--dim)}
   .tlr.past{display:none}
+  .tlr.skip{text-decoration:line-through;color:var(--dim)}
+  .tlr.nnext{background:rgba(88,166,255,.05)}
+  .tlacts{display:flex;gap:8px;padding:6px;border-bottom:1px solid var(--line);background:var(--bg)}
+  .tlacts .btn{flex:1;min-height:32px;font-size:12px}
+  .tldct{color:var(--mag);font-weight:700}
   .tlg .hdg{color:var(--mag);font-weight:600}
   .tlnow .tlh{cursor:pointer}
   .tlnow.fold .tlg,.tlnow.fold .tlfw{display:none}
@@ -969,7 +974,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.23';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.24';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2278,16 +2283,22 @@
         + (c != null ? `<span class="${c > 0 ? 'hw' : c < 0 ? 'tw' : ''}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${Math.abs(c)}</span>` : '')
         + `<span>${sg(t)}° <small>${sg(isa)}</small></span></div>`; }).join('')}</div>`;
   }
-  const tlFwOpen = {Now: false, Next: false}; let tlNowOpen = false;   // NOW card starts folded (name + time); tap it to open   // forecast-wind strip: tap WIND on a card to show/hide
+  const tlFwOpen = {Now: false, Active: false, Next: false}; const tlOpen = {Now: false, Next: false};   // NOW and NEXT start folded   // NOW card starts folded (name + time); tap it to open   // forecast-wind strip: tap WIND on a card to show/hide
   function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
-    const fold = lab === 'Now' && !tlNowOpen;
-    return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}${lab === 'Now' ? ' tlnow' + (fold ? ' fold' : '') : ''}"><div class="tlh"${lab === 'Now' ? ' data-nowt="1"' : ''}><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
+    const foldable = lab === 'Now' || lab === 'Next', fold = foldable && !tlOpen[lab];
+    return `<div class="tlc${lab === 'Active' ? ' tlnext' : ''}${foldable ? ' tlnow' + (fold ? ' fold' : '') : ''}"><div class="tlh"${foldable ? ` data-fold="${lab}"` : ''}><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
       <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${tlFw(p) ? `<div class="tlwtap" data-fwt="${lab}"><span class="tlk">WIND <span class="tlchev">${tlFwOpen[lab] ? '▴' : '▾'}</span></span><div class="tlv">${tlWind(p)}</div></div>` : cell('WIND', tlWind(p))}</div>${tlFwOpen[lab] ? tlFw(p) : ''}</div>`;
   }
   const tlAdj = e => ((ofp.tlAdj || {})[e.id]) || 0;
+  const tlDct = e => ((ofp.tlDct || {})[e.id]) || null;   // {from: active point, to: direct-to point} (original indices)
+  // nav with ADJ applied, each point keeping its original index (oi); points skipped by a DIRECT TO are left out
+  function tlNav(e, adj){
+    const d = tlDct(e);
+    return e.data.nav.map((p, i) => { const q = p.slice(); q[1] += adj; q.oi = i; return q; }).filter(q => !d || !(q.oi > d.from && q.oi < d.to));
+  }
   const FIRS = {WSJC:'Singapore',WMFC:'Kuala Lumpur',WBFC:'Kota Kinabalu',WIIF:'Jakarta',WAAF:'Ujung Pandang',VTBB:'Bangkok',VVHM:'Ho Chi Minh',VVHN:'Hanoi',VLVT:'Vientiane',VDPF:'Phnom Penh',VYYF:'Yangon',VGFR:'Dhaka',
     VOMF:'Chennai',VECF:'Kolkata',VIDF:'Delhi',VABF:'Mumbai',VCCF:'Colombo',VRMF:'Male',VNSM:'Kathmandu',OPLR:'Lahore',OPKR:'Karachi',OAKX:'Kabul',OIIX:'Tehran',OMAE:'Emirates',OOMM:'Muscat',OBBB:'Bahrain',OEJD:'Jeddah',OKAC:'Kuwait',ORBB:'Baghdad',OJAC:'Amman',OSTT:'Damascus',
     UTAV:'Turkmenabat',UTAA:'Ashgabat',UTAK:'Turkmenbashi',UTTR:'Tashkent',UTSD:'Samarkand',UBBA:'Baku',UGGG:'Tbilisi',UDDD:'Yerevan',UAAA:'Almaty',UACN:'Astana',
@@ -2329,9 +2340,29 @@
     const adSet = k => { ofp.tlAdj = ofp.tlAdj || {}; const v = tlAdj(e) + k; if (v) ofp.tlAdj[e.id] = v; else delete ofp.tlAdj[e.id]; store.set('ofp', ofp); adShow(); tlRender(e); };
     $('tlAdM').onclick = () => adSet(-1); $('tlAdP').onclick = () => adSet(1); adShow();
     // tap a point in the list to mark it as a reporting point (tap again to clear)
-    $('tlList').onclick = ev => { const r = ev.target.closest('.tlr'); if (!r) return; const i = +r.dataset.i;
-      ofp.tlRepP = ofp.tlRepP || {}; const set = new Set(ofp.tlRepP[e.id] || []); set.has(i) ? set.delete(i) : set.add(i);
-      ofp.tlRepP[e.id] = [...set]; store.set('ofp', ofp); r.classList.toggle('rep', set.has(i)); tlTick(true); };
+    // tap a point → DIRECT TO / REPORT TO ATC under it (tap the point again to close)
+    $('tlList').onclick = ev => {
+      const act = ev.target.closest('[data-act]');
+      if (act){
+        const i = +act.dataset.i;
+        if (act.dataset.act === 'rep'){ ofp.tlRepP = ofp.tlRepP || {}; const set = new Set(ofp.tlRepP[e.id] || []); set.has(i) ? set.delete(i) : set.add(i); ofp.tlRepP[e.id] = [...set]; }
+        else if (act.dataset.act === 'dct'){
+          ofp.tlDct = ofp.tlDct || {}; const d = tlDct(e);
+          if (d && d.to === i) delete ofp.tlDct[e.id];   // reverse the direct
+          else { const nv = tlNav(e, tlAdj(e)), t = tlToMs(e), el = t ? (Date.now() - t.ms) / 60e3 : -1;
+            let ci = -1; nv.forEach((p, k) => { if (p[1] <= el) ci = k; }); const act0 = nv[ci + 1];
+            if (!act0 || i <= act0.oi){ act.textContent = 'Pick a point after the active one'; return; }
+            ofp.tlDct[e.id] = {from: act0.oi, to: i}; }
+        }
+        store.set('ofp', ofp); tlRender(e); return;
+      }
+      const r = ev.target.closest('.tlr'); if (!r) return;
+      const open = r.nextElementSibling && r.nextElementSibling.classList.contains('tlacts');
+      $('tlList').querySelectorAll('.tlacts').forEach(x => x.remove());
+      if (open) return;
+      const i = +r.dataset.i, d = tlDct(e), isRep = tlRep(e).has(i);
+      r.insertAdjacentHTML('afterend', `<div class="tlacts"><button class="btn small" data-act="dct" data-i="${i}">${d && d.to === i ? 'Cancel direct' : 'Direct to'}</button><button class="btn small" data-act="rep" data-i="${i}">${isRep ? 'Unmark report' : 'Report to ATC'}</button></div>`);
+    };
     $('tlToM').onclick = () => { const t = tlToMs(e); if (t) setTo(t.ms - 60e3); };
     $('tlToP').onclick = () => { const t = tlToMs(e); if (t) setTo(t.ms + 60e3); };
     bind24($('tlTo'), v => { if (!v || document.activeElement === $('tlTo')) return; const t = tlToMs(e); const [h, m] = v.split(':').map(Number);
@@ -2340,14 +2371,15 @@
       if (!t || ms !== t.ms) setTo(ms); });
     $('tlCards').onclick = ev => {
       const w = ev.target.closest('[data-fwt]'); if (w){ tlFwOpen[w.dataset.fwt] = !tlFwOpen[w.dataset.fwt]; tlTick(true); return; }
-      if (ev.target.closest('[data-nowt], .tlnow.fold')){ tlNowOpen = !tlNowOpen; tlTick(true); } };
+      const f = ev.target.closest('[data-fold]') || (ev.target.closest('.tlnow.fold') || {}).querySelector?.('[data-fold]');
+      if (f){ tlOpen[f.dataset.fold] = !tlOpen[f.dataset.fold]; tlTick(true); } };
     tlLast = -2; tlTick(true);
   }
   // What's coming up in the next 30 min: FIR change, VWS ≥ 4, CLB/DES, MSA above 100 (high ground)
   function tlAlerts(nav, el, rep, firN){
     const out = []; let lastFl = null, lastWasDes = false;
     nav.forEach((p, i) => {
-      if (rep && rep.has(i) && p[1] > el && p[1] <= el + 30) out.push([p[1], 'Report to ATC', ofpEsc(p[0].replace(/^-/, ''))]);
+      if (rep && rep.has(p.oi != null ? p.oi : i) && p[1] > el && p[1] <= el + 30) out.push([p[1], 'Report to ATC', ofpEsc(p[0].replace(/^-/, ''))]);
       const num = /^\d{3}$/.test(p[2]) ? +p[2] : null, soon = p[1] > el && p[1] <= el + 30;
       if (soon && p[0].startsWith('-')) out.push([p[1], 'FIR change', ofpEsc(tlFir(p[0], firN))]);
       if (soon && p[11] != null && p[11] >= 4) out.push([p[1], 'VWS', `<b class="${p[11] >= 9 ? 'vwsr' : 'vwsy'}">${p[11]}</b> at ${ofpEsc(p[0])}`]);
@@ -2368,7 +2400,7 @@
     const now = Date.now(), d = new Date(now);
     $('tlUtc').textContent = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds());
     const to = tlToMs(e); if (!to){ $('tlEl').textContent = '--:--:--'; return; }
-    const sec = (now - to.ms) / 1000, el = sec / 60, nav = e.data.nav.map(p => { const q = p.slice(); q[1] += adj; return q; }), rep = tlRep(e);
+    const sec = (now - to.ms) / 1000, el = sec / 60, nav = tlNav(e, adj), rep = tlRep(e);
     $('tlEl').textContent = tlHMS(sec); $('tlElK').textContent = sec < 0 ? 'To T/O' : 'Since T/O';
     // To LDG: OFP flight time (+ ADJ) minus time since T/O; vs schedule: actual T/O against STD + taxi, plus ADJ (same block time)
     const od = e.data, ftM = od.ft ? (+od.ft.split('.')[0]) * 60 + (+od.ft.split('.')[1]) : null;
@@ -2388,10 +2420,13 @@
       tlLast = ci;
       const cur = ci >= 0 ? nav[ci] : null;
       const ya = adj ? ` class="${tlAdjC(adj)}"` : '';
-      $('tlCards').innerHTML = tlCard('Now', cur, cur ? `<span${ya}>${tlHM(cur[1])} · ${tlZ(to.ms + cur[1] * 60e3)}Z</span>` : (sec < 0 ? 'before take-off' : 'climbing out'), '', rep.has(ci))
-        + tlCard('Next', nx, nx ? `<span id="tlIn"></span> · <span${ya}>${tlZ(to.ms + nx[1] * 60e3)}Z</span>` : 'arrived',
-                 nx && cur ? tlTurn([...nav.slice(0, ci + 1)].reverse().find(q => q[3] != null), nx) : '', rep.has(ci + 1));
-      document.querySelectorAll('#tlList .tlr').forEach(r => { const i = +r.dataset.i; r.classList.toggle('now', i === ci); r.classList.toggle('next', i === ci + 1); r.classList.toggle('past', i < ci); });
+      const nn = nav[ci + 2], dct = tlDct(e);
+      $('tlCards').innerHTML = tlCard('Now', cur, cur ? `<span${ya}>${tlHM(cur[1])} · ${tlZ(to.ms + cur[1] * 60e3)}Z</span>` : (sec < 0 ? 'before take-off' : 'climbing out'), '', cur && rep.has(cur.oi))
+        + tlCard('Active', nx, nx ? `<span id="tlIn"></span> · <span${ya}>${tlZ(to.ms + nx[1] * 60e3)}Z</span>` : 'arrived',
+                 nx && cur ? tlTurn([...nav.slice(0, ci + 1)].reverse().find(q => q[3] != null), nx) : '', nx && rep.has(nx.oi))
+        + (nn ? tlCard('Next', nn, `${dct && dct.to === nn.oi ? '<span class="tldct">DCT</span> ' : ''}<span${ya}>${tlZ(to.ms + nn[1] * 60e3)}Z</span>`, tlTurn(nx, nn), rep.has(nn.oi)) : '');
+      const curOi = cur ? cur.oi : -1, nxOi = nx ? nx.oi : -1, nnOi = nn ? nn.oi : -1;
+      document.querySelectorAll('#tlList .tlr').forEach(r => { const i = +r.dataset.i; r.classList.toggle('now', i === curOi); r.classList.toggle('next', i === nxOi); r.classList.toggle('nnext', i === nnOi); r.classList.toggle('past', i < curOi); r.classList.toggle('skip', !!dct && i > dct.from && i < dct.to); });
     }
     const tin = $('tlIn'); if (tin && nx) tin.textContent = 'in ' + tlHMS((nx[1] * 60 - sec));
     if (force || Math.floor(sec) % 15 === 0) tlAlerts(nav, el, rep, e.data.firN);
