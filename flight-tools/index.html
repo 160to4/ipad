@@ -423,6 +423,10 @@
   .tlacts{display:flex;gap:8px;padding:6px;border-bottom:1px solid var(--line);background:var(--bg)}
   .tlacts .btn{flex:1;min-height:32px;font-size:12px}
   .tldct{color:var(--mag);font-weight:700}
+  .tltrk{cursor:pointer}
+  .tltrkset{display:flex;gap:6px;margin-top:4px}
+  #ofpOut .tltrkset .btn{flex:none;min-width:0;width:34px;height:28px;min-height:0;padding:0;font-size:15px}
+  #ofpOut .tltrkset .btn[data-trkd="0"]{width:auto;padding:0 8px;font-size:11px}
   .tlg .hdg{color:var(--mag);font-weight:600}
   .tlnow .tlh{cursor:pointer}
   .tlnow.fold .tlg,.tlnow.fold .tlfw{display:none}
@@ -437,7 +441,10 @@
   .tlr.now{background:rgba(245,165,36,.18);font-weight:600}
   .tlr.next{background:rgba(88,166,255,.12)}
   .ofpmode{flex:1 1 100%;margin-top:6px}
-  .ofpmode button{flex:1;font-size:12px;letter-spacing:.06em;font-weight:700}
+  .ofpmode button{flex:1;font-size:12px;letter-spacing:.06em;font-weight:700;min-height:34px}
+  body.compact .ofpmode button{min-height:30px}
+  #ofpMeta:empty{display:none}
+  .card.ofptop{position:sticky;top:-8px;z-index:15;box-shadow:0 6px 14px rgba(0,0,0,.35)}
   .ldgtop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:4px 0 10px}
   .ldgtop .tlclk b{font-size:24px}
   .ldgset .tlto{margin:0 0 4px}
@@ -821,14 +828,14 @@
 
   <!-- ============ OFP ============ -->
   <section class="view" id="view-ofp">
-    <div class="card">
+    <div class="card ofptop">
       <div class="nsyncrow" style="margin-bottom:0">
         <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
         <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
         <button class="btn small" id="ofpBrief" style="display:none">BRIEF</button>
         <button class="btn small" id="ofpTl" style="display:none">TIMELINE</button>
         <div class="seg ofpmode" id="ofpMode" role="tablist"><button data-m="pre">PRE FLT</button><button data-m="crz">CRZ</button><button data-m="ldg">LDG</button></div>
-        <div class="nmeta" id="ofpMeta">Pick an annotated OFP PDF from Files.</div>
+        <div class="nmeta" id="ofpMeta"></div>
       </div>
     </div>
     <div class="card" id="ofpOut"></div>
@@ -974,7 +981,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.24';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.25';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2206,14 +2213,14 @@
       ofp.cur = id; store.set('ofp', ofp); ofpToRest(d);
       const keys = ['flight','plan','reg','apd','std','sta','ft','fl','ci','pzfw','ptow','rtowKg','burn','cont','excess','reserves','altn','fit','taxiKg','route'];
       const found = keys.filter(k => k === 'route' ? (d.route1 || d.route) : d[k] != null && d[k] !== '').length;
-      $('ofpMeta').textContent = `${f.name} · ${d.pages} pages · ${found}/${keys.length} values found`;
+      $('ofpMeta').textContent = '';
       ofpRender();
     }catch(err){
       $('ofpMeta').innerHTML = '<span class="bad">Couldn’t read that PDF.</span> ' + esc(err.message || '');
     }
   });
   $('ofpRecent').addEventListener('change', () => { ofp.cur = $('ofpRecent').value; store.set('ofp', ofp); ofpRender();
-    const e = ofp.recent.find(r => r.id === ofp.cur); if (e){ $('ofpMeta').textContent = e.name; ofpToRest(e.data); } });
+    const e = ofp.recent.find(r => r.id === ofp.cur); if (e){ $('ofpMeta').textContent = ''; ofpToRest(e.data); } });
   $('ofpOut').addEventListener('click', ev => { if (ev.target.id === 'fmcBtn'){ ofp.fmc = !ofp.fmc; store.set('ofp', ofp); ofpRender(); } });
   $('ofpBrief').onclick = () => { ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpRender(); };
   $('ofpTl').onclick = () => { ofp.tlv = !ofp.tlv; store.set('ofp', ofp); ofpRender(); };
@@ -2283,6 +2290,7 @@
         + (c != null ? `<span class="${c > 0 ? 'hw' : c < 0 ? 'tw' : ''}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${Math.abs(c)}</span>` : '')
         + `<span>${sg(t)}° <small>${sg(isa)}</small></span></div>`; }).join('')}</div>`;
   }
+  let tlTrkEdit = null;   // point whose TRK −/+ is showing
   const tlFwOpen = {Now: false, Active: false, Next: false}; const tlOpen = {Now: false, Next: false};   // NOW and NEXT start folded   // NOW card starts folded (name + time); tap it to open   // forecast-wind strip: tap WIND on a card to show/hide
   function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
@@ -2290,14 +2298,15 @@
     const foldable = lab === 'Now' || lab === 'Next', fold = foldable && !tlOpen[lab];
     return `<div class="tlc${lab === 'Active' ? ' tlnext' : ''}${foldable ? ' tlnow' + (fold ? ' fold' : '') : ''}"><div class="tlh"${foldable ? ` data-fold="${lab}"` : ''}><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
-      <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${tlFw(p) ? `<div class="tlwtap" data-fwt="${lab}"><span class="tlk">WIND <span class="tlchev">${tlFwOpen[lab] ? '▴' : '▾'}</span></span><div class="tlv">${tlWind(p)}</div></div>` : cell('WIND', tlWind(p))}</div>${tlFwOpen[lab] ? tlFw(p) : ''}</div>`;
+      <div class="tlg">${`<div class="tltrk" data-trk="${p.oi}"><span class="tlk">TRK / HDG</span><div class="tlv">${tlTH(p)}${turn ? ` <small class="turn">${turn}</small>` : ''}</div>${tlTrkEdit === p.oi && p[3] != null ? `<div class="tltrkset"><button class="btn small" data-trkd="-1" data-i="${p.oi}">−</button><button class="btn small" data-trkd="1" data-i="${p.oi}">+</button>${p.trkSet ? `<button class="btn small" data-trkd="0" data-i="${p.oi}">OFP</button>` : ''}</div>` : ''}</div>`}${tlFw(p) ? `<div class="tlwtap" data-fwt="${lab}"><span class="tlk">WIND <span class="tlchev">${tlFwOpen[lab] ? '▴' : '▾'}</span></span><div class="tlv">${tlWind(p)}</div></div>` : cell('WIND', tlWind(p))}</div>${tlFwOpen[lab] ? tlFw(p) : ''}</div>`;
   }
   const tlAdj = e => ((ofp.tlAdj || {})[e.id]) || 0;
   const tlDct = e => ((ofp.tlDct || {})[e.id]) || null;   // {from: active point, to: direct-to point} (original indices)
   // nav with ADJ applied, each point keeping its original index (oi); points skipped by a DIRECT TO are left out
   function tlNav(e, adj){
     const d = tlDct(e);
-    return e.data.nav.map((p, i) => { const q = p.slice(); q[1] += adj; q.oi = i; return q; }).filter(q => !d || !(q.oi > d.from && q.oi < d.to));
+    const tk = ((ofp.tlTrk || {})[e.id]) || {};
+    return e.data.nav.map((p, i) => { const q = p.slice(); q[1] += adj; q.oi = i; if (tk[i] != null){ q[3] = tk[i]; q.trkSet = true; } return q; }).filter(q => !d || !(q.oi > d.from && q.oi < d.to));
   }
   const FIRS = {WSJC:'Singapore',WMFC:'Kuala Lumpur',WBFC:'Kota Kinabalu',WIIF:'Jakarta',WAAF:'Ujung Pandang',VTBB:'Bangkok',VVHM:'Ho Chi Minh',VVHN:'Hanoi',VLVT:'Vientiane',VDPF:'Phnom Penh',VYYF:'Yangon',VGFR:'Dhaka',
     VOMF:'Chennai',VECF:'Kolkata',VIDF:'Delhi',VABF:'Mumbai',VCCF:'Colombo',VRMF:'Male',VNSM:'Kathmandu',OPLR:'Lahore',OPKR:'Karachi',OAKX:'Kabul',OIIX:'Tehran',OMAE:'Emirates',OOMM:'Muscat',OBBB:'Bahrain',OEJD:'Jeddah',OKAC:'Kuwait',ORBB:'Baghdad',OJAC:'Amman',OSTT:'Damascus',
@@ -2350,9 +2359,9 @@
           ofp.tlDct = ofp.tlDct || {}; const d = tlDct(e);
           if (d && d.to === i) delete ofp.tlDct[e.id];   // reverse the direct
           else { const nv = tlNav(e, tlAdj(e)), t = tlToMs(e), el = t ? (Date.now() - t.ms) / 60e3 : -1;
-            let ci = -1; nv.forEach((p, k) => { if (p[1] <= el) ci = k; }); const act0 = nv[ci + 1];
-            if (!act0 || i <= act0.oi){ act.textContent = 'Pick a point after the active one'; return; }
-            ofp.tlDct[e.id] = {from: act0.oi, to: i}; }
+            let ci = -1; nv.forEach((p, k) => { if (p[1] <= el) ci = k; }); const now0 = ci >= 0 ? nv[ci].oi : -1;
+            if (i <= now0){ act.textContent = 'That point is already behind'; return; }
+            ofp.tlDct[e.id] = {from: now0, to: i}; }   // straight from the last point passed to this one: it becomes ACTIVE
         }
         store.set('ofp', ofp); tlRender(e); return;
       }
@@ -2370,6 +2379,11 @@
       if (ms - Date.now() > 12 * 3600e3) ms -= 864e5; else if (Date.now() - ms > 18 * 3600e3) ms += 864e5;
       if (!t || ms !== t.ms) setTo(ms); });
     $('tlCards').onclick = ev => {
+      const td = ev.target.closest('[data-trkd]');
+      if (td){ const i = +td.dataset.i, k = +td.dataset.trkd; ofp.tlTrk = ofp.tlTrk || {}; const m = ofp.tlTrk[e.id] = ofp.tlTrk[e.id] || {};
+        if (!k) delete m[i]; else { const base = m[i] != null ? m[i] : e.data.nav[i][3]; m[i] = ((base + k - 1) % 360 + 360) % 360 + 1; }
+        store.set('ofp', ofp); tlTick(true); return; }
+      const tr = ev.target.closest('[data-trk]'); if (tr){ const i = +tr.dataset.trk; tlTrkEdit = tlTrkEdit === i ? null : i; tlTick(true); return; }
       const w = ev.target.closest('[data-fwt]'); if (w){ tlFwOpen[w.dataset.fwt] = !tlFwOpen[w.dataset.fwt]; tlTick(true); return; }
       const f = ev.target.closest('[data-fold]') || (ev.target.closest('.tlnow.fold') || {}).querySelector?.('[data-fold]');
       if (f){ tlOpen[f.dataset.fold] = !tlOpen[f.dataset.fold]; tlTick(true); } };
@@ -2422,9 +2436,9 @@
       const ya = adj ? ` class="${tlAdjC(adj)}"` : '';
       const nn = nav[ci + 2], dct = tlDct(e);
       $('tlCards').innerHTML = tlCard('Now', cur, cur ? `<span${ya}>${tlHM(cur[1])} · ${tlZ(to.ms + cur[1] * 60e3)}Z</span>` : (sec < 0 ? 'before take-off' : 'climbing out'), '', cur && rep.has(cur.oi))
-        + tlCard('Active', nx, nx ? `<span id="tlIn"></span> · <span${ya}>${tlZ(to.ms + nx[1] * 60e3)}Z</span>` : 'arrived',
+        + tlCard('Active', nx, nx ? `${dct && dct.to === nx.oi ? '<span class="tldct">DCT</span> ' : ''}<span id="tlIn"></span> · <span${ya}>${tlZ(to.ms + nx[1] * 60e3)}Z</span>` : 'arrived',
                  nx && cur ? tlTurn([...nav.slice(0, ci + 1)].reverse().find(q => q[3] != null), nx) : '', nx && rep.has(nx.oi))
-        + (nn ? tlCard('Next', nn, `${dct && dct.to === nn.oi ? '<span class="tldct">DCT</span> ' : ''}<span${ya}>${tlZ(to.ms + nn[1] * 60e3)}Z</span>`, tlTurn(nx, nn), rep.has(nn.oi)) : '');
+        + (nn ? tlCard('Next', nn, `<span${ya}>${tlZ(to.ms + nn[1] * 60e3)}Z</span>`, tlTurn(nx, nn), rep.has(nn.oi)) : '');
       const curOi = cur ? cur.oi : -1, nxOi = nx ? nx.oi : -1, nnOi = nn ? nn.oi : -1;
       document.querySelectorAll('#tlList .tlr').forEach(r => { const i = +r.dataset.i; r.classList.toggle('now', i === curOi); r.classList.toggle('next', i === nxOi); r.classList.toggle('nnext', i === nnOi); r.classList.toggle('past', i < curOi); r.classList.toggle('skip', !!dct && i > dct.from && i < dct.to); });
     }
