@@ -418,6 +418,12 @@
   .tlfw .hw{color:#ff9b8a} .tlfw .tw{color:#7ee08a}
   .tlfw small{font-size:.85em;color:var(--dim)}
   .tlr.past{display:none}
+  .tlg .hdg{color:var(--mag);font-weight:600}
+  .tlnow .tlh{cursor:pointer}
+  .tlnow.fold .tlg,.tlnow.fold .tlfw{display:none}
+  .tlnow.fold .tlh{margin-bottom:0}
+  .tlnow .tlh::after{content:'▾';font-size:10px;color:var(--dim);margin-left:6px}
+  .tlnow:not(.fold) .tlh::after{content:'▴'}
   .tladjg{color:var(--green)}
   .tlfir{margin-left:5px;white-space:nowrap}
   .tlh .tlfir{font-size:20px;font-weight:600;margin-left:0}
@@ -963,7 +969,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.22';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.23';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1495,6 +1501,7 @@
     paints.forEach(f => f());
   }
   bind24($('paLand'), v => { pa.land = v || ''; paSave(); paRender(); });
+  window.fdtPaLand = v => { if (pa.land === v) return; pa.land = v; paSave(); $('paLand').value = v; paRender(); };   // set from OFP › LDG
   [['paTaxi','taxi']].forEach(([id,k]) => $(id).addEventListener('input', () => {
     $(id).value = $(id).value.replace(/\D/g,'').slice(0,3); pa[k] = $(id).value; paSave(); paRender();
   }));
@@ -2235,7 +2242,7 @@
   }
   const tlFL = p => p[2] || '—';
   const tlTrk = p => p && p[3] != null ? tl3(p[3]) + '°' : '—';
-  const tlTH = p => { if (!p || p[3] == null) return '—'; const h = tlHdgN(p); return `${tl3(p[3])}°<small> / </small>${h == null ? '—' : tl3(h) + '°'}`; };
+  const tlTH = p => { if (!p || p[3] == null) return '—'; const h = tlHdgN(p); return `${tl3(p[3])}°<small> / </small>${h == null ? '—' : `<span class="hdg">${tl3(h)}°</span>`}`; };
   const tlMsa = p => p && p[10] != null ? `<span class="${p[10] > 100 ? 'msahi' : ''}">${String(p[10]).padStart(3, '0')}</span>` : '—';
   const tlVws = p => p && p[11] != null ? `<span class="${p[11] >= 9 ? 'vwsr' : p[11] >= 4 ? 'vwsy' : ''}">${p[11]}</span>` : '—';
   function tlDriftN(p){   // drift from the wind triangle: crosswind ÷ TAS (TAS ≈ GS + headwind when the OFP gives none); + = wind from the right
@@ -2271,11 +2278,12 @@
         + (c != null ? `<span class="${c > 0 ? 'hw' : c < 0 ? 'tw' : ''}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${Math.abs(c)}</span>` : '')
         + `<span>${sg(t)}° <small>${sg(isa)}</small></span></div>`; }).join('')}</div>`;
   }
-  const tlFwOpen = {Now: false, Next: false};   // forecast-wind strip: tap WIND on a card to show/hide
+  const tlFwOpen = {Now: false, Next: false}; let tlNowOpen = false;   // NOW card starts folded (name + time); tap it to open   // forecast-wind strip: tap WIND on a card to show/hide
   function tlCard(lab, p, extra, turn, isRep){
     if (!p) return `<div class="tlc"><div class="tlh"><span class="tlk">${lab}</span><b>—</b><span class="tlx">${extra}</span></div></div>`;
     const cell = (k, v) => `<div><span class="tlk">${k}</span><div class="tlv">${v}</div></div>`;
-    return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}"><div class="tlh"><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
+    const fold = lab === 'Now' && !tlNowOpen;
+    return `<div class="tlc${lab === 'Next' ? ' tlnext' : ''}${lab === 'Now' ? ' tlnow' + (fold ? ' fold' : '') : ''}"><div class="tlh"${lab === 'Now' ? ' data-nowt="1"' : ''}><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
       <div class="tlg">${cell('TRK / HDG', tlTH(p) + (turn ? ` <small class="turn">${turn}</small>` : ''))}${tlFw(p) ? `<div class="tlwtap" data-fwt="${lab}"><span class="tlk">WIND <span class="tlchev">${tlFwOpen[lab] ? '▴' : '▾'}</span></span><div class="tlv">${tlWind(p)}</div></div>` : cell('WIND', tlWind(p))}</div>${tlFwOpen[lab] ? tlFw(p) : ''}</div>`;
   }
@@ -2314,8 +2322,8 @@
         <button class="btn small" id="tlAdP" aria-label="Waypoint times 1 minute later">+</button></div>
       <div class="tlal" id="tlAl"></div>
       <div id="tlCards"></div>
-      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr${tlRep(e).has(i) ? ' rep' : ''}" data-i="${i}"><span>${ofpEsc(p[0])}${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}<small class="tlrep">(report)</small></span><span class="${tlAdjC(adj)}">${tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
-    const setTo = ms => { ofp.tlTo = ofp.tlTo || {}; ofp.tlTo[e.id] = ms; store.set('ofp', ofp); $('tlTo').value = tlZ(ms); tlTick(true); };
+      <div class="tllist" id="tlList">${nav.map((p, i) => `<div class="tlr${tlRep(e).has(i) ? ' rep' : ''}" data-i="${i}"><span>${ofpEsc(p[0])}${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}<small class="tlrep">(report)</small></span><span class="${tlAdjC(adj)}">${to ? tlZ(to.ms + p[1] * 60e3) + 'Z' : tlHM(p[1])}</span><span>${tlFL(p)}</span><span>${p[3] != null ? String(p[3]).padStart(3, '0') : ''}</span><span>${tlWind(p)}</span></div>`).join('')}</div>`;
+    const setTo = ms => { ofp.tlTo = ofp.tlTo || {}; ofp.tlTo[e.id] = ms; store.set('ofp', ofp); tlRender(e); };   // redraw so the list's UTC times move too
     // ADJ: shifts every waypoint time (e.g. running late in flight) — NINOP 06:53 → 06:54 with one +
     const adShow = () => { const a = tlAdj(e); $('tlAd').textContent = (a < 0 ? '−' : '+') + tlHM(Math.abs(a)); };
     const adSet = k => { ofp.tlAdj = ofp.tlAdj || {}; const v = tlAdj(e) + k; if (v) ofp.tlAdj[e.id] = v; else delete ofp.tlAdj[e.id]; store.set('ofp', ofp); adShow(); tlRender(e); };
@@ -2330,7 +2338,9 @@
       const base = new Date(t ? t.ms : Date.now()); let ms = Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), h, m);
       if (ms - Date.now() > 12 * 3600e3) ms -= 864e5; else if (Date.now() - ms > 18 * 3600e3) ms += 864e5;
       if (!t || ms !== t.ms) setTo(ms); });
-    $('tlCards').onclick = ev => { const w = ev.target.closest('[data-fwt]'); if (!w) return; tlFwOpen[w.dataset.fwt] = !tlFwOpen[w.dataset.fwt]; tlTick(true); };
+    $('tlCards').onclick = ev => {
+      const w = ev.target.closest('[data-fwt]'); if (w){ tlFwOpen[w.dataset.fwt] = !tlFwOpen[w.dataset.fwt]; tlTick(true); return; }
+      if (ev.target.closest('[data-nowt], .tlnow.fold')){ tlNowOpen = !tlNowOpen; tlTick(true); } };
     tlLast = -2; tlTick(true);
   }
   // What's coming up in the next 30 min: FIR change, VWS ≥ 4, CLB/DES, MSA above 100 (high ground)
@@ -2639,6 +2649,7 @@
     const cd = $('ldgCd'); if (!cd) return;
     const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
     const ms = ldgMs(e); if (ms == null){ cd.textContent = '--:--:--'; return; }
+    if (window.fdtPaLand){ const r = Math.round(ms / 300e3) * 300e3; window.fdtPaLand(zHM(r)); }   // PA landing time = LDG time to the nearest 5 min
     const sec = Math.floor((ms - Date.now()) / 1000), a = Math.abs(sec);
     cd.textContent = (sec < 0 ? '+' : '') + pad2(Math.floor(a / 3600)) + ':' + pad2(Math.floor(a / 60) % 60) + ':' + pad2(a % 60);
     $('ldgK').textContent = sec < 0 ? 'Since LDG' : 'To LDG';
