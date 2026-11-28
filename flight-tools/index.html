@@ -203,7 +203,7 @@
   body.compact .parow .say,body.compact .capt,body.compact .big2,body.compact .parow .out{font-size:15px}
   body.compact .parow .num.name{width:140px}
   body.compact .parow .btn.small{min-width:0;width:40px;padding:0}
-  body.compact #view-pa .card > .row:first-child .btn{min-height:32px}
+  body.compact #ldgPA .card > .row:first-child .btn{min-height:32px}
   body.compact .modal .box{padding:16px}
 
 
@@ -425,6 +425,12 @@
   .tlr.past.x{color:var(--dim)}
   .tlr.now{background:rgba(245,165,36,.18);font-weight:600}
   .tlr.next{background:rgba(88,166,255,.12)}
+  .ofpmode{flex:1 1 100%;margin-top:6px}
+  .ofpmode button{flex:1;font-size:12px;letter-spacing:.06em;font-weight:700}
+  .ldgtop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:4px 0 10px}
+  .ldgtop .tlclk b{font-size:24px}
+  .ldgset .tlto{margin:0 0 4px}
+  #ldgPA > .card{margin-top:0}
   .ofpf.stdf .v b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
   .ofpf.stdf .v b.early{color:var(--green)} .ofpf.stdf .v b.late{color:var(--red)}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
@@ -614,7 +620,6 @@
     <button class="tab" role="tab" data-view="stopwatch">Timer <i class="dot" id="dotSw"></i><i class="dot" id="dotCd"></i></button>
     <button class="tab" role="tab" data-view="calc">Calc</button>
     <button class="tab" role="tab" data-view="tools">Tools</button>
-    <button class="tab" role="tab" data-view="pa">PA</button>
     <button class="tab" role="tab" data-view="notes">Notes</button>
   </nav>
   <button class="padbtn" id="padToggle" aria-label="Show or hide scratchpad" title="Scratchpad">✎</button>
@@ -763,8 +768,60 @@
     </div>
   </section>
 
-  <!-- ============ PA ============ -->
-  <section class="view" id="view-pa">
+  <!-- ============ NOTES (from Apple Notes via Shortcuts) ============ -->
+  <section class="view" id="view-notes">
+    <div class="card">
+      <div class="nrow">
+        <span class="grp"><span class="unit">DEP</span><select class="num sel dd" id="nDep"></select></span>
+        <button class="btn small" id="nSwap" aria-label="Swap departure and destination">⇄</button>
+        <span class="grp"><span class="unit">DEST</span><select class="num sel dd" id="nDest"></select></span>
+      </div>
+    </div>
+
+    <div class="card" id="nBody"></div>
+
+    <div class="card">
+      <div class="nsyncrow">
+        <a class="btn small" id="nRun" href="shortcuts://run-shortcut?name=Sync%20Flight%20Notes">1 · Sync</a>
+        <button class="btn small" id="nPaste">2 · Paste</button>
+        <div class="nmeta" id="nMeta"></div>
+      </div>
+      <details id="nHelp">
+        <summary class="label">Set up the “Sync Flight Notes” shortcut (once)</summary>
+        <ol class="nsteps">
+          <li>Open <b>Shortcuts</b> → <b>+</b> → name it exactly <b>Sync Flight Notes</b>.</li>
+          <li>Add <b>Find Notes</b> → <i>Add Filter</i> → <b>Folder</b> is your flight-notes folder (or <b>Name</b> contains <b>-</b>). If iPadOS says it’s too many items: Settings → Apps → Shortcuts → Advanced → Allow Sharing Large Amounts of Data.</li>
+          <li>Add <b>Repeat with Each</b> (it uses the Notes from step 2).</li>
+          <li>Inside the repeat, add <b>Make HTML from Rich Text</b> with <b>Repeat Item</b> as its input (turn <i>Make Full Document</i> off). This keeps tables and formatting.</li>
+          <li>Below it (still inside the repeat), add <b>Text</b> and type <b>&lt;&lt;&lt;NOTE&gt;&gt;&gt;</b>, then a new line, then insert the variable <b>Repeat Item</b> → tap it → choose <b>Name</b>. New line again, then insert <b>HTML from Rich Text</b>.</li>
+          <li>After <i>End Repeat</i>, add <b>Combine Text</b> (Repeat Results, combine with <b>New Lines</b>).</li>
+          <li>Add <b>Copy to Clipboard</b>. Done.</li>
+        </ol>
+        <p class="unit">Then: tap <b>1 · Sync</b> → when Shortcuts finishes, come back here → tap <b>2 · Paste</b> → tap the <b>Paste</b> bubble iPadOS shows. Notes are saved on this iPad and work offline. Re-sync after you edit notes.</p>
+        <p class="unit">Titles are matched on the two 3-letter codes, e.g. “12 SIN-AMS”, “12. SIN-AMS” or “SIN-AMS” → SIN→AMS. Numbers in front are ignored.</p>
+      </details>
+      <div id="nManual" style="display:none;margin-top:10px">
+        <div class="unit" style="margin-bottom:6px">Couldn’t read the clipboard automatically — long-press in the box, choose Paste, then tap Save.</div>
+        <textarea id="nTa" rows="4" class="nta"></textarea>
+        <div class="btns" style="justify-content:flex-start"><button class="btn small" id="nTaSave">Save</button><button class="btn small ghost" id="nTaCancel">Cancel</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OFP ============ -->
+  <section class="view" id="view-ofp">
+    <div class="card">
+      <div class="nsyncrow" style="margin-bottom:0">
+        <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
+        <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
+        <button class="btn small" id="ofpBrief" style="display:none">BRIEF</button>
+        <button class="btn small" id="ofpTl" style="display:none">TIMELINE</button>
+        <div class="seg ofpmode" id="ofpMode" role="tablist"><button data-m="pre">PRE FLT</button><button data-m="crz">CRZ</button><button data-m="ldg">LDG</button></div>
+        <div class="nmeta" id="ofpMeta">Pick an annotated OFP PDF from Files.</div>
+      </div>
+    </div>
+    <div class="card" id="ofpOut"></div>
+    <div id="ldgPA" hidden>
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <div class="label">Arrival PA</div>
@@ -840,60 +897,7 @@
         <div class="say" id="paScpSay"></div>
       </div>
     </div>
-  </section>
-
-  <!-- ============ NOTES (from Apple Notes via Shortcuts) ============ -->
-  <section class="view" id="view-notes">
-    <div class="card">
-      <div class="nrow">
-        <span class="grp"><span class="unit">DEP</span><select class="num sel dd" id="nDep"></select></span>
-        <button class="btn small" id="nSwap" aria-label="Swap departure and destination">⇄</button>
-        <span class="grp"><span class="unit">DEST</span><select class="num sel dd" id="nDest"></select></span>
-      </div>
     </div>
-
-    <div class="card" id="nBody"></div>
-
-    <div class="card">
-      <div class="nsyncrow">
-        <a class="btn small" id="nRun" href="shortcuts://run-shortcut?name=Sync%20Flight%20Notes">1 · Sync</a>
-        <button class="btn small" id="nPaste">2 · Paste</button>
-        <div class="nmeta" id="nMeta"></div>
-      </div>
-      <details id="nHelp">
-        <summary class="label">Set up the “Sync Flight Notes” shortcut (once)</summary>
-        <ol class="nsteps">
-          <li>Open <b>Shortcuts</b> → <b>+</b> → name it exactly <b>Sync Flight Notes</b>.</li>
-          <li>Add <b>Find Notes</b> → <i>Add Filter</i> → <b>Folder</b> is your flight-notes folder (or <b>Name</b> contains <b>-</b>). If iPadOS says it’s too many items: Settings → Apps → Shortcuts → Advanced → Allow Sharing Large Amounts of Data.</li>
-          <li>Add <b>Repeat with Each</b> (it uses the Notes from step 2).</li>
-          <li>Inside the repeat, add <b>Make HTML from Rich Text</b> with <b>Repeat Item</b> as its input (turn <i>Make Full Document</i> off). This keeps tables and formatting.</li>
-          <li>Below it (still inside the repeat), add <b>Text</b> and type <b>&lt;&lt;&lt;NOTE&gt;&gt;&gt;</b>, then a new line, then insert the variable <b>Repeat Item</b> → tap it → choose <b>Name</b>. New line again, then insert <b>HTML from Rich Text</b>.</li>
-          <li>After <i>End Repeat</i>, add <b>Combine Text</b> (Repeat Results, combine with <b>New Lines</b>).</li>
-          <li>Add <b>Copy to Clipboard</b>. Done.</li>
-        </ol>
-        <p class="unit">Then: tap <b>1 · Sync</b> → when Shortcuts finishes, come back here → tap <b>2 · Paste</b> → tap the <b>Paste</b> bubble iPadOS shows. Notes are saved on this iPad and work offline. Re-sync after you edit notes.</p>
-        <p class="unit">Titles are matched on the two 3-letter codes, e.g. “12 SIN-AMS”, “12. SIN-AMS” or “SIN-AMS” → SIN→AMS. Numbers in front are ignored.</p>
-      </details>
-      <div id="nManual" style="display:none;margin-top:10px">
-        <div class="unit" style="margin-bottom:6px">Couldn’t read the clipboard automatically — long-press in the box, choose Paste, then tap Save.</div>
-        <textarea id="nTa" rows="4" class="nta"></textarea>
-        <div class="btns" style="justify-content:flex-start"><button class="btn small" id="nTaSave">Save</button><button class="btn small ghost" id="nTaCancel">Cancel</button></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ OFP ============ -->
-  <section class="view" id="view-ofp">
-    <div class="card">
-      <div class="nsyncrow" style="margin-bottom:0">
-        <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
-        <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
-        <button class="btn small" id="ofpBrief" style="display:none">BRIEF</button>
-        <button class="btn small" id="ofpTl" style="display:none">TIMELINE</button>
-        <div class="nmeta" id="ofpMeta">Pick an annotated OFP PDF from Files.</div>
-      </div>
-    </div>
-    <div class="card" id="ofpOut"></div>
   </section>
 
   <!-- ============ SHARED SCRATCHPAD (same on every tab) ============ -->
@@ -959,7 +963,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.21';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.22';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1012,8 +1016,9 @@
   }
 
   /* ---------- Tabs (hash routing) ---------- */
-  const views = ['ofp','stopwatch','calc','tools','pa','notes'];
+  const views = ['ofp','stopwatch','calc','tools','notes'];
   function show(name){
+    if (name === 'pa'){ name = 'ofp'; if (window.fdtOfpMode) window.fdtOfpMode('ldg'); else { const o = store.get('ofp', {}); o.mode = 'ldg'; store.set('ofp', o); } }   // PA now lives on OFP › LDG
     if (name === 'countdown') name = 'stopwatch';   // CD tab was merged into Timer
     if (name === 'calc' && store.get('tab', '') !== 'calc'){ store.set('calcMode', 'rest'); if (typeof window.fdtCalcMode === 'function') window.fdtCalcMode('rest'); }   // Calc opens on Rest
     if (name === 'crew-rest'){ name = 'calc'; store.set('calcMode', 'rest'); if (typeof window.fdtCalcMode === 'function') window.fdtCalcMode('rest'); }   // Rest now lives in Calc
@@ -1920,7 +1925,7 @@
     $('ofpRecent').innerHTML = ofp.recent.length ? ofp.recent.map(r => `<option value="${r.id}">${ofpEsc(r.label)}</option>`).join('') : '<option value="">No OFPs loaded yet</option>';
     $('ofpRecent').value = ofp.cur || '';
     $('ofpRecent').style.display = ofp.recent.length ? '' : 'none';
-    if (!e){ $('ofpBrief').style.display = 'none'; $('ofpTl').style.display = 'none'; box.innerHTML = '<div class="nempty">Tap <b>Open OFP…</b> and choose an annotated OFP PDF from Files. The key figures appear here and stay saved on this iPad.</div>'; return; }
+    if (!e){ $('ofpBrief').style.display = 'none'; $('ofpTl').style.display = 'none'; if (ofpModeNow() === 'ldg'){ box.innerHTML = '<div class="nempty">Open an OFP for the landing figures.</div>'; return; } box.innerHTML = '<div class="nempty">Tap <b>Open OFP…</b> and choose an annotated OFP PDF from Files. The key figures appear here and stay saved on this iPad.</div>'; return; }
     const d = e.data, h = d.hdr || {};
     const flt = d.flight || (h.flt ? 'SIA ' + h.flt : null);
     const plan = d.plan || (h.ofp ? 'OFP ' + h.ofp : null);
@@ -1949,9 +1954,10 @@
       ${crewRow('LSS', cin('lss1', ''))}
       ${crewRow('LSS', cin('lss2', ''))}</div>`;
     const hlB = v => brief ? `<span class="hlv">${v}</span>` : v;   // BRIEF highlight
-    $('ofpBrief').style.display = ''; $('ofpBrief').classList.toggle('on', brief); setTimeout(() => { try{ stdTick(); }catch(x){} }, 0);
-    $('ofpTl').style.display = ''; $('ofpTl').classList.toggle('on', !!ofp.tlv);
-    if (ofp.tlv){ tlRender(e); return; }
+    $('ofpBrief').style.display = 'none'; $('ofpBrief').classList.toggle('on', brief);   // BRIEF kept for later setTimeout(() => { try{ stdTick(); }catch(x){} }, 0);
+    $('ofpTl').style.display = 'none';
+    const mode = ofpModeNow(); ofp.tlv = mode === 'crz';
+    if (mode === 'crz'){ tlRender(e); return; }
     const planNo = plan ? String(plan).replace(/^(PLAN|OFP)\s*/i, '') : null;
     // OptiClimb figures read from an eWAS screenshot (per OFP)
     const oc = (ofp.oc || {})[e.id];
@@ -2076,7 +2082,10 @@
         if (over >= 0.1) ptowV += `<span class="caution">⚠ Overweight take-off if ${over.toFixed(1)} taxi fuel not used</span>`;
       }
     }
-    box.innerHTML = `
+    const landHtml = `<div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}<span class="calc">Source: EZFW ${zfwNow != null ? zfwNow.toFixed(1) : '—'} · OFP LDG fuel ${ldg != null ? ldg.toFixed(1) : '—'}</span></div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>`;
+    const headHtml = `<div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}${planNo ? ' · PLAN ' + ofpEsc(planNo) : ''}</span></div>`;
+    if (mode === 'ldg'){ box.innerHTML = headHtml + ldgTopHtml(e) + `<div class="ofpgrid">${landHtml}</div>`; ldgBind(e); }
+    else box.innerHTML = `
       <div class="ofphead"><span class="big">${ofpEsc(flt || 'OFP')}</span><span class="unit">${ofpEsc(route)}${d.date || h.date ? ' · ' + ofpEsc(d.date || h.date) : ''}${planNo ? ' · PLAN ' + ofpEsc(planNo) : ''}</span></div>
       <div class="ofpgrid">
         ${d.std ? `<div class="ofpf stdf"><div class="k" id="stdK">To STD</div><div class="v"><b id="stdV">--:--</b></div></div>` : ''}
@@ -2097,7 +2106,6 @@
             ? `<span class="fmc${brief ? ' br' : ''}">${fmcLegs(d.route1 || d.route).map(([v, w]) => `<span class="via">${ofpEsc(v)}</span><span class="to">${ofpEsc(w)}</span>`).join('')}</span>`
             : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
           : null, false, 'route')}
-        <div class="ofpf landf"><div class="k">Landing</div><div class="v">${landV}</div>${vrefV ? `<div class="k appk">APP SPD <small>(beta)</small></div><div class="v">${vrefV}</div>` : ''}</div>
         ${ofpField(`PAX<span class="pobl">POB <b id="pobV">${pob(pax)}</b></span><label class="crewclr scanb">Scan<input type="file" accept="image/*" data-scan="pax" hidden></label>`, paxV + '<span class="calc" id="paxMsg"></span>', false, 'paxf')}
         ${crewHtml}
       </div>`;
@@ -2586,6 +2594,62 @@
     else if (file) ocFromFile(id, file);
     else ocMsg(`Couldn’t get the picture from that drag (got: ${[...(dt.types || [])].join(', ') || 'nothing'}). Use the button instead.`);
   });
+  // ---------- OFP page modes: PRE FLT (figures) · CRZ (timeline) · LDG (landing countdown, landing figures, PA)
+  function ofpModeNow(){ return ofp.mode || (ofp.tlv ? 'crz' : 'pre'); }
+  function ofpModePaint(){
+    const m = ofpModeNow();
+    document.querySelectorAll('#ofpMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    $('ldgPA').hidden = m !== 'ldg';
+  }
+  const setOfpMode = m => { ofp.mode = m; ofp.tlv = m === 'crz'; store.set('ofp', ofp); ofpModePaint(); ofpRender(); };
+  window.fdtOfpMode = setOfpMode;
+  $('ofpMode').addEventListener('click', ev => { const b = ev.target.closest('[data-m]'); if (b) setOfpMode(b.dataset.m); });
+
+  // LDG countdown: landing time defaults to STD + taxi + flight time; −/+ or type to change it (saved per OFP)
+  function stdMs(d){
+    const std = d.std && /^\d{4}$/.test(d.std) ? d.std : null; if (!std) return null;
+    const dm = (d.date || '').match(/^(\d{2})([A-Z]{3})(\d{2})$/), now = new Date();
+    let ms = dm && MON[dm[2]] != null ? Date.UTC(2000 + +dm[3], MON[dm[2]], +dm[1], +std.slice(0, 2), +std.slice(2))
+                                      : Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), +std.slice(0, 2), +std.slice(2));
+    if (!dm){ if (ms - Date.now() > 12 * 3600e3) ms -= 864e5; else if (Date.now() - ms > 12 * 3600e3) ms += 864e5; }
+    return ms;
+  }
+  const ftMin = d => d.ft ? (+d.ft.split('.')[0]) * 60 + (+d.ft.split('.')[1]) : null;
+  function ldgPlanMs(d){ const s0 = stdMs(d), f = ftMin(d); return s0 == null || f == null ? null : s0 + ((crOfp.taxi != null ? crOfp.taxi : 15) + f) * 60e3; }
+  function ldgMs(e){ const set = (ofp.ldgT || {})[e.id]; return set != null ? set : ldgPlanMs(e.data); }
+  const zHM = ms => { const d = new Date(ms); return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); };
+  function ldgTopHtml(e){
+    const ms = ldgMs(e);
+    return `<div class="ldgtop"><div class="tlclk"><span class="tlk" id="ldgK">To LDG</span><b id="ldgCd">--:--:--</b></div>
+      <div class="ldgset"><div class="tlto"><span class="tlk">LDG</span>
+        <button class="btn small" data-ldgt="-1" aria-label="Landing 1 minute earlier">−</button>
+        <input class="num t24" id="ldgT" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="${ms != null ? zHM(ms) : ''}"><span class="unit">Z</span>
+        <button class="btn small" data-ldgt="1" aria-label="Landing 1 minute later">+</button></div>
+        <div class="tlarr" id="ldgSta"></div></div></div>`;
+  }
+  function ldgBind(e){
+    const setMs = ms => { ofp.ldgT = ofp.ldgT || {}; const p = ldgPlanMs(e.data); if (p != null && ms === p) delete ofp.ldgT[e.id]; else ofp.ldgT[e.id] = ms; store.set('ofp', ofp); $('ldgT').value = zHM(ms); ldgTick(); };
+    $('ofpOut').querySelectorAll('[data-ldgt]').forEach(b => b.onclick = () => { const ms = ldgMs(e); if (ms != null) setMs(ms + (+b.dataset.ldgt) * 60e3); });
+    bind24($('ldgT'), v => { if (!v || document.activeElement === $('ldgT')) return; const cur = ldgMs(e) || Date.now(), [h, m] = v.split(':').map(Number), b0 = new Date(cur);
+      let ms = Date.UTC(b0.getUTCFullYear(), b0.getUTCMonth(), b0.getUTCDate(), h, m); if (ms - cur > 12 * 3600e3) ms -= 864e5; else if (cur - ms > 12 * 3600e3) ms += 864e5;
+      if (ms !== cur) setMs(ms); });
+    ldgTick();
+  }
+  function ldgTick(){
+    const cd = $('ldgCd'); if (!cd) return;
+    const e = ofp.recent.find(r => r.id === ofp.cur); if (!e) return;
+    const ms = ldgMs(e); if (ms == null){ cd.textContent = '--:--:--'; return; }
+    const sec = Math.floor((ms - Date.now()) / 1000), a = Math.abs(sec);
+    cd.textContent = (sec < 0 ? '+' : '') + pad2(Math.floor(a / 3600)) + ':' + pad2(Math.floor(a / 60) % 60) + ':' + pad2(a % 60);
+    $('ldgK').textContent = sec < 0 ? 'Since LDG' : 'To LDG';
+    // vs STA: planned landing is STD + taxi + flight time; any later landing arrives that much after the STA (same taxi-in)
+    const d = e.data, p = ldgPlanMs(d);
+    if (p != null && d.sta && /^\d{4}$/.test(d.sta)){
+      const diff = Math.round((ms - p) / 60e3), sta = new Date(Date.UTC(2000, 0, 1, +d.sta.slice(0, 2), +d.sta.slice(2)) + diff * 60e3);
+      $('ldgSta').innerHTML = `<span>ARR ${pad2(sta.getUTCHours())}:${pad2(sta.getUTCMinutes())}Z</span> <span class="${diff > 0 ? 'late' : diff < 0 ? 'early' : ''}">${diff ? (diff > 0 ? '+' : '−') + Math.abs(diff) + ' min vs STA' : 'on STA'}</span>`;
+    }
+  }
+
   // TO STD / AFTER STD: counts to the OFP's STD (UTC, on the OFP date), green before, red after
   const MON = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
   function stdTick(){
@@ -2600,7 +2664,8 @@
     v.textContent = (before ? '−' : '+') + pad2(Math.floor(sec / 3600)) + ':' + pad2(Math.floor(sec / 60) % 60) + ':' + pad2(sec % 60);
     v.className = before ? 'early' : 'late'; $('stdK').textContent = before ? 'To STD' : 'After STD';
   }
-  setInterval(() => { if ($('view-ofp').classList.contains('active')) stdTick(); }, 1000);
+  setInterval(() => { if ($('view-ofp').classList.contains('active')){ stdTick(); ldgTick(); } }, 1000);
+  ofpModePaint();
   ofpRender();
 
   // keep in step with the PA tab's Departure / Destination
