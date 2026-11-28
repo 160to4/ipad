@@ -321,7 +321,7 @@
   /* OFP */
   .ofpopen{position:relative;cursor:pointer;display:inline-flex;align-items:center}
   .nrow .num.sel.dd.ofprecent,.ofprecent{max-width:260px}
-  #ofpBar .ofprecent{flex:1 1 0;min-width:0;max-width:none;width:auto;text-overflow:ellipsis}
+  #ofpBar .ofprecent{flex:1 1 0;min-width:0;max-width:none;width:auto;text-overflow:ellipsis;font-size:14px;height:36px}
   #view-ofp .num.sel.dd{width:auto;min-width:0;height:40px;font-size:15px;padding:0 30px 0 10px;
     background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
   .ofpgrid{display:flex;flex-direction:column;gap:5px}
@@ -428,10 +428,16 @@
   .rtaf .v{font-variant-numeric:tabular-nums}
   .rtaf .tlto{display:flex;align-items:center;gap:5px;margin:0}
   #ofpOut .rtaf .num.t24{flex:none;width:76px;height:30px;font-size:15px;padding:0 4px}
-  .rtaf .rtato{font-size:17px}
+  .rtaf .rtato{font-size:16px;font-weight:500}
+  .rtaf .k.rtak{cursor:pointer}
+  .rtaf .rtach{color:var(--dim);font-size:10px;margin-left:4px}
+  .ofpf.rtamin{cursor:pointer}
+  .ofpf.rtamin .v{color:var(--dim);font-size:14px}
+  .ofpf.rtamin .v b{color:var(--text);font-weight:500}
+  .ofpgrid > .ofpf.brhide{display:none}
   .rtaf .v{min-width:0}
   .rtawp{position:relative;display:block;width:100%}
-  #ofpOut .rtawp .aptin{width:100%;flex:none;box-sizing:border-box;text-align:left;padding:0 10px}
+  #ofpOut .rtawp .aptin{width:100%;flex:none;font-size:15px;height:30px;letter-spacing:.04em;box-sizing:border-box;text-align:left;padding:0 10px}
   .rtaf .tlto{width:100%}
   #ofpOut .rtaf .num.t24{flex:1 1 auto;width:auto;min-width:0}
   .rtagrid b{font-size:16px}
@@ -476,6 +482,12 @@
   .ldgtop .tlclk b{font-size:24px}
   .ldgset .tlto{margin:0 0 4px}
   #ldgPA > .card{margin-top:0}
+  /* Arrival PA on LDG: everything 40% smaller; boxes/buttons kept tall enough to tap */
+  #ldgPA > .card{zoom:.6}
+  #ldgPA .parow .num,#ldgPA .parow .num.t24,#ldgPA .parow .num.sel{height:52px !important;font-size:18px !important}
+  #ldgPA .parow .num:not(.sel):not(.aptin):not(.name){width:80px}
+  #ldgPA .parow .num.t24{width:110px}
+  #ldgPA .btn{min-height:50px}
   .ofpf.stdf .v b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
   .ofpf.stdf .v b.early{color:var(--green)} .ofpf.stdf .v b.late{color:var(--red)}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
@@ -1029,7 +1041,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.29';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.30';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2031,7 +2043,7 @@
     // POB = the four cabin figures + infants + crew (children are already counted in the cabin figures)
     const pob = pp => [0, 1, 2, 3, 5, 6, 7].reduce((a, i) => a + (parseInt(pp[i], 10) || 0), 0);
     const dlt = (v, i) => { const n = parseInt(v, 10); if (isNaN(n) || n === PAX_DEF[i]) return ''; const d = n - PAX_DEF[i]; return (d > 0 ? '+' : '−') + Math.abs(d); };
-    const paxV = `<span class="paxrow">${pax.slice(0, 4).map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span><span class="kidrow"><span class="kl">Child</span>${kid(4)}<span class="paxsep">/</span><span class="kl">Inf.</span>${kid(5)}</span><span class="kidrow"><span class="kl">Crew</span><select class="paxsel" data-pax="6" data-id="${e.id}" aria-label="Flight crew">${[2,3,4,5,6,7,8,9,10].map(n => `<option${+pax[6] === n ? ' selected' : ''}>${n}</option>`).join('')}</select><span class="paxsep">/</span><input class="paxin${+pax[7] !== 15 ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="7" data-id="${e.id}" value="${ofpEsc(pax[7])}" aria-label="Cabin crew"></span>`;
+    const paxV = `<span class="kidrow"><span class="kl">Crew</span><select class="paxsel" data-pax="6" data-id="${e.id}" aria-label="Flight crew">${[2,3,4,5,6,7,8,9,10].map(n => `<option${+pax[6] === n ? ' selected' : ''}>${n}</option>`).join('')}</select><span class="paxsep">/</span><input class="paxin${+pax[7] !== 15 ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="7" data-id="${e.id}" value="${ofpEsc(pax[7])}" aria-label="Cabin crew"></span><span class="paxrow">${pax.slice(0, 4).map((v, i) => `${i ? '<span class="paxsep">/</span>' : ''}<span class="paxcell"><span class="paxd" data-paxd="${i}">${dlt(v, i)}</span><input class="paxin${dlt(v, i) ? ' chg' : ''}" inputmode="numeric" maxlength="3" data-pax="${i}" data-id="${e.id}" value="${ofpEsc(v)}" aria-label="PAX ${i + 1}"></span>`).join('')}</span><span class="kidrow"><span class="kl">Child</span>${kid(4)}<span class="paxsep">/</span><span class="kl">Inf.</span>${kid(5)}</span>`;
     if (!ofp.crewAll) ofp.crewAll = Object.assign({}, (ofp.crew || {})[e.id]);   // crew names stay when a new OFP is loaded
     const crew = ofp.crewAll;
     const cin = (k, ph) => `<input class="crewin" data-crew="${k}" data-id="${e.id}" value="${ofpEsc(crew[k] || '')}" placeholder="${ph}" autocapitalize="words" autocomplete="off" spellcheck="false">`;
@@ -2202,6 +2214,7 @@
         ${crewHtml}
       </div>`;
     if (mode !== 'ldg') rtaBind(e);
+    if (brief && mode === 'pre') box.querySelectorAll('.ofpgrid > .ofpf').forEach(f => f.classList.toggle('brhide', !f.querySelector('.hlv,.bn,.hl,.hlin,.fmc.br')));
     // Steppers (PZFW, excess, landing fuel). Typed values are saved as you type, and −/+ always step from
     // what's in the box, so iPad's "tap elsewhere doesn't leave the box" no longer loses a typed figure.
     const num = el => { const v = parseFloat(String(el.value).replace(/[−–]/g, '-').replace(/[^\d.\-]/g, '')); return isNaN(v) ? null : Math.round(v * 10) / 10; };
@@ -2751,15 +2764,19 @@
   // ---------- RTA: pick a waypoint, RTA defaults to STD + taxi + its ACTM; T/O time = RTA − ACTM
   function rtaGet(e){ return ((ofp.rta || {})[e.id]) || null; }
   function rtaDefault(e, i){ const s0 = stdMs(e.data); return s0 == null ? null : s0 + ((crOfp.taxi != null ? crOfp.taxi : 15) + e.data.nav[i][1]) * 60e3; }
+  let rtaOpen = false;   // RTA box starts folded; tap to open
   function rtaHtml(e){
     const r = rtaGet(e), p = r && e.data.nav[r.i], ms = r ? (r.ms != null ? r.ms : rtaDefault(e, r.i)) : null;
+    if (!rtaOpen) return `<div class="ofpf rtaf rtamin" id="rtaMin"><div class="k">RTA<span class="rtach">▸</span></div><div class="v">${p && ms != null ? `<b>${ofpEsc(p[0])}</b> ${zHM(ms)}Z<span class="sep">·</span>T/O <b>${zHM(ms - p[1] * 60e3)}Z</b>` : 'Tap to set'}</div></div>`;
     return `<div class="ofpf zfwf rtaf">
-      <div class="k">RTA waypoint</div><div class="v"><span class="rtawp"><input class="num aptin" id="rtaWp" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="—" value="${p ? ofpEsc(p[0]) : ''}"><div class="aptsug" id="rtaSug" hidden></div></span></div>
+      <div class="k rtak">RTA waypoint<span class="rtach">▾</span></div><div class="v"><span class="rtawp"><input class="num aptin" id="rtaWp" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="—" value="${p ? ofpEsc(p[0]) : ''}"><div class="aptsug" id="rtaSug" hidden></div></span></div>
       <div class="k">RTA time</div><div class="v tlto">${p ? `<button class="btn small" data-rta="-1">−</button><input class="num t24 rtat${r.ms != null ? ' tladjt' : ''}" id="rtaT" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="${zHM(ms)}"><span class="unit">Z</span><button class="btn small" data-rta="1">+</button>` : '<span class="dimtxt">pick a waypoint</span>'}</div>
       <div class="k">Take-off at</div><div class="v"><b class="rtato">${p && ms != null ? zHM(ms - p[1] * 60e3) + 'Z' : '—'}</b></div>
     </div>`;
   }
   function rtaBind(e){
+    const mn = $('rtaMin'); if (mn){ mn.onclick = () => { rtaOpen = true; ofpRender(); }; return; }
+    const rk = $('ofpOut').querySelector('.rtaf .rtak'); if (rk) rk.onclick = () => { rtaOpen = false; ofpRender(); };
     const inp = $('rtaWp'); if (!inp) return;
     const sug = $('rtaSug'), nav = e.data.nav;
     const pick = i => { ofp.rta = ofp.rta || {}; ofp.rta[e.id] = {i}; store.set('ofp', ofp); ofpRender(); };
