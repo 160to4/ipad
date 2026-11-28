@@ -138,6 +138,7 @@
   /* ---------- Landscape: tools on the left, scratchpad on the right ---------- */
   @media (orientation: landscape){
     body{height:100dvh;overflow:hidden}
+    #ofpBar{max-width:none;width:60%;margin:0}
     .padbtn{display:block}
     main{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);grid-template-rows:minmax(0,1fr);
       max-width:none;flex:1;min-height:0;overflow:hidden}
@@ -423,12 +424,15 @@
   .tlacts{display:flex;gap:8px;padding:6px;border-bottom:1px solid var(--line);background:var(--bg)}
   .tlacts .btn{flex:1;min-height:32px;font-size:12px}
   .tldct{color:var(--mag);font-weight:700}
-  .rtagrid{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
+  .rtaf .v{font-variant-numeric:tabular-nums}
+  .rtaf .tlto{display:flex;align-items:center;gap:5px;margin:0}
+  #ofpOut .rtaf .num.t24{flex:none;width:76px;height:30px;font-size:15px;padding:0 4px}
+  .rtaf .rtato{font-size:17px}
   .rtawp{position:relative}
   .rtawp .aptin{width:110px;text-align:left;padding:0 10px}
   .rtagrid b{font-size:16px}
   .rtagrid .tlto{margin:0}
-  #ofpOut .rtagrid .btn{flex:none;width:30px;min-width:0;height:30px;min-height:0;padding:0;font-size:16px}
+  #ofpOut .rtaf .btn{flex:none;width:30px;min-width:0;height:30px;min-height:0;padding:0;font-size:16px}
   .rtat{min-width:66px;text-align:center}
   .tltrk{cursor:pointer}
   .tlfw > div{cursor:pointer}
@@ -459,7 +463,11 @@
   #ofpMeta:empty{display:none}
   .ofpmode button{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
   .brtag{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--mag);text-transform:none}
-  .card.ofptop{position:sticky;top:-8px;z-index:15;box-shadow:0 6px 14px rgba(0,0,0,.35)}
+  /* fixed under the tab bar (outside the scrolling area, so it never moves) — only on the OFP tab */
+  #ofpBar{flex:0 0 auto;width:100%;max-width:980px;margin:0 auto;padding:10px calc(16px + var(--edge-r) + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));box-sizing:border-box}
+  #ofpBar[hidden]{display:none}
+  body.compact #ofpBar{padding:6px calc(10px + var(--edge-r)) 0 10px}
+  #ofpBar .card.ofptop{margin:0}
   .ldgtop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:4px 0 10px}
   .ldgtop .tlclk b{font-size:24px}
   .ldgset .tlto{margin:0 0 4px}
@@ -565,10 +573,10 @@
   .dgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .dgrid label{display:flex;flex-direction:column;gap:4px}
   .dgrid .num{width:100%;min-width:0;text-align:center;font-size:22px;height:48px}
-  .dout{margin-top:14px}
-  .dhdg{display:flex;align-items:baseline;gap:12px}
+  .dout{margin-top:14px;text-align:center}
+  .dhdg{display:flex;align-items:baseline;justify-content:center;gap:12px}
   .dhdg b{font-size:44px;font-weight:600;color:var(--mag);font-variant-numeric:tabular-nums}
-  .dline{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px;font-size:15px;font-variant-numeric:tabular-nums}
+  .dline{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;margin-top:6px;font-size:15px;font-variant-numeric:tabular-nums}
   .cmode button{flex:1}
   #calcKeys .key:disabled{opacity:.3}
   .cdisp{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;text-align:right;margin-bottom:12px}
@@ -665,6 +673,18 @@
   </nav>
   <button class="padbtn" id="padToggle" aria-label="Show or hide scratchpad" title="Scratchpad">✎</button>
 </header>
+<div id="ofpBar" hidden>
+    <div class="card ofptop">
+      <div class="nsyncrow" style="margin-bottom:0">
+        <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
+        <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
+        <button class="btn small" id="ofpBrief" style="display:none">BRIEF</button>
+        <button class="btn small" id="ofpTl" style="display:none">TIMELINE</button>
+        <div class="seg ofpmode" id="ofpMode" role="tablist"><button data-m="pre">PRE FLT</button><button data-m="crz">CRZ</button><button data-m="ldg">LDG</button></div>
+        <div class="nmeta" id="ofpMeta"></div>
+      </div>
+    </div>
+</div>
 
 <main>
   <!-- ============ TIMER: countdown to time · count up · countdown ============ -->
@@ -862,16 +882,6 @@
 
   <!-- ============ OFP ============ -->
   <section class="view" id="view-ofp">
-    <div class="card ofptop">
-      <div class="nsyncrow" style="margin-bottom:0">
-        <label class="btn small go ofpopen">Open OFP…<input type="file" id="ofpFile" accept="application/pdf,.pdf" hidden></label>
-        <select class="num sel dd ofprecent" id="ofpRecent" aria-label="Recent OFPs"></select>
-        <button class="btn small" id="ofpBrief" style="display:none">BRIEF</button>
-        <button class="btn small" id="ofpTl" style="display:none">TIMELINE</button>
-        <div class="seg ofpmode" id="ofpMode" role="tablist"><button data-m="pre">PRE FLT</button><button data-m="crz">CRZ</button><button data-m="ldg">LDG</button></div>
-        <div class="nmeta" id="ofpMeta"></div>
-      </div>
-    </div>
     <div class="card" id="ofpOut"></div>
     <div id="ldgPA" hidden>
     <div class="card">
@@ -1015,7 +1025,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.27';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.28';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1070,6 +1080,7 @@
   /* ---------- Tabs (hash routing) ---------- */
   const views = ['ofp','stopwatch','calc','tools','notes'];
   function show(name){
+    const _bar = document.getElementById('ofpBar');
     if (name === 'pa'){ name = 'ofp'; if (window.fdtOfpMode) window.fdtOfpMode('ldg'); else { const o = store.get('ofp', {}); o.mode = 'ldg'; store.set('ofp', o); } }   // PA now lives on OFP › LDG
     if (name === 'countdown') name = 'stopwatch';   // CD tab was merged into Timer
     if (name === 'calc' && store.get('tab', '') !== 'calc'){ store.set('calcMode', 'rest'); if (typeof window.fdtCalcMode === 'function') window.fdtCalcMode('rest'); }   // Calc opens on Rest
@@ -1078,6 +1089,7 @@
     if (!views.includes(name)) name = 'stopwatch';
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view===name));
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id==='view-'+name));
+    if (_bar) _bar.hidden = name !== 'ofp';
     store.set('tab', name);
     requestAnimationFrame(() => { pads.forEach(p => p.resize()); if (typeof fit === 'function') fit(); });
   }
@@ -2181,7 +2193,7 @@
             ? `<span class="fmc${brief ? ' br' : ''}">${fmcLegs(d.route1 || d.route).map(([v, w]) => `<span class="via">${ofpEsc(v)}</span><span class="to">${ofpEsc(w)}</span>`).join('')}</span>`
             : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
           : null, false, 'route')}
-        ${d.nav ? ofpField('RTA', rtaHtml(e), false, 'rtaf') : ''}
+        ${d.nav ? rtaHtml(e) : ''}
         ${ofpField(`PAX<span class="pobl">POB <b id="pobV">${pob(pax)}</b></span><label class="crewclr scanb">Scan<input type="file" accept="image/*" data-scan="pax" hidden></label>`, paxV + '<span class="calc" id="paxMsg"></span>', false, 'paxf')}
         ${crewHtml}
       </div>`;
@@ -2732,10 +2744,10 @@
   function rtaDefault(e, i){ const s0 = stdMs(e.data); return s0 == null ? null : s0 + ((crOfp.taxi != null ? crOfp.taxi : 15) + e.data.nav[i][1]) * 60e3; }
   function rtaHtml(e){
     const r = rtaGet(e), p = r && e.data.nav[r.i], ms = r ? (r.ms != null ? r.ms : rtaDefault(e, r.i)) : null;
-    return `<div class="rtagrid">
-      <span class="tlk">Waypoint</span><span class="rtawp"><input class="num aptin" id="rtaWp" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="—" value="${p ? ofpEsc(p[0]) : ''}"><div class="aptsug" id="rtaSug" hidden></div></span>
-      <span class="tlk">RTA</span><span class="tlto">${p ? `<button class="btn small" data-rta="-1">−</button><b class="rtat${r.ms != null ? ' tladjt' : ''}">${zHM(ms)}Z</b><button class="btn small" data-rta="1">+</button>` : '<span class="dimtxt">pick a waypoint</span>'}</span>
-      <span class="tlk">Take-off at</span><b>${p && ms != null ? zHM(ms - p[1] * 60e3) + 'Z' : '—'}</b>
+    return `<div class="ofpf zfwf rtaf">
+      <div class="k">RTA waypoint</div><div class="v"><span class="rtawp"><input class="num aptin" id="rtaWp" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="—" value="${p ? ofpEsc(p[0]) : ''}"><div class="aptsug" id="rtaSug" hidden></div></span></div>
+      <div class="k">RTA time</div><div class="v tlto">${p ? `<button class="btn small" data-rta="-1">−</button><input class="num t24 rtat${r.ms != null ? ' tladjt' : ''}" id="rtaT" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" value="${zHM(ms)}"><span class="unit">Z</span><button class="btn small" data-rta="1">+</button>` : '<span class="dimtxt">pick a waypoint</span>'}</div>
+      <div class="k">Take-off at</div><div class="v"><b class="rtato">${p && ms != null ? zHM(ms - p[1] * 60e3) + 'Z' : '—'}</b></div>
     </div>`;
   }
   function rtaBind(e){
@@ -2752,9 +2764,13 @@
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ const f = sug.querySelector('[data-i]'); if (f) pick(+f.dataset.i); } });
     sug.addEventListener('pointerdown', ev => { const b = ev.target.closest('[data-i]'); if (b){ ev.preventDefault(); pick(+b.dataset.i); } });
     inp.addEventListener('blur', () => setTimeout(() => { sug.hidden = true; const r = rtaGet(e); inp.value = r ? nav[r.i][0] : ''; }, 150));
-    $('ofpOut').querySelectorAll('[data-rta]').forEach(b => b.onclick = () => { const r = rtaGet(e); if (!r) return;
-      const ms = (r.ms != null ? r.ms : rtaDefault(e, r.i)) + (+b.dataset.rta) * 60e3, d0 = rtaDefault(e, r.i);
-      r.ms = ms === d0 ? null : ms; if (r.ms == null) delete r.ms; store.set('ofp', ofp); ofpRender(); });
+    const setRta = ms => { const r = rtaGet(e); if (!r) return; const d0 = rtaDefault(e, r.i); if (ms === d0) delete r.ms; else r.ms = ms; store.set('ofp', ofp); ofpRender(); };
+    $('ofpOut').querySelectorAll('[data-rta]').forEach(b => b.onclick = () => { const r = rtaGet(e); if (!r) return; setRta((r.ms != null ? r.ms : rtaDefault(e, r.i)) + (+b.dataset.rta) * 60e3); });
+    const ti = $('rtaT');
+    if (ti) bind24(ti, v => { if (!v || document.activeElement === ti) return; const r = rtaGet(e); if (!r) return;   // typed RTA: nearest day to the default
+      const ref = rtaDefault(e, r.i) || Date.now(), b0 = new Date(ref), [h, m] = v.split(':').map(Number);
+      let ms = Date.UTC(b0.getUTCFullYear(), b0.getUTCMonth(), b0.getUTCDate(), h, m); if (ms - ref > 12 * 3600e3) ms -= 864e5; else if (ref - ms > 12 * 3600e3) ms += 864e5;
+      if (ms !== (r.ms != null ? r.ms : rtaDefault(e, r.i))) setRta(ms); });
   }
 
   // ---------- OFP page modes: PRE FLT (figures) · CRZ (timeline) · LDG (landing countdown, landing figures, PA)
