@@ -488,6 +488,13 @@
   #ldgPA .parow .num:not(.sel):not(.aptin):not(.name){width:80px}
   #ldgPA .parow .num.t24{width:110px}
   #ldgPA .btn{min-height:50px}
+  #ldgPA .parow{grid-template-columns:150px 1fr !important}
+  #ldgPA .parow .k{white-space:nowrap}
+  #ldgPA #paLandOut{flex-basis:100%;margin-left:0;text-align:left}
+  #ldgPA #paDiff{font-size:12px}
+  #ldgPA .captl{display:flex;align-items:center;gap:8px;flex-basis:100%}
+  #ldgPA .capt{font-size:13px}
+  #ldgPA .captl .num.name{flex:1;min-width:0;width:auto}
   .ofpf.stdf .v b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
   .ofpf.stdf .v b.early{color:var(--green)} .ofpf.stdf .v b.late{color:var(--red)}
   .landrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
@@ -963,8 +970,8 @@
       <div class="parow">
         <div class="k">On behalf of</div>
         <div class="ctl">
-          <span class="capt">Captain</span><input class="num name" id="paCap1" autocapitalize="words" autocomplete="off" spellcheck="false" placeholder="Name">
-          <span class="capt">Captain</span><input class="num name" id="paCap2" autocapitalize="words" autocomplete="off" spellcheck="false" placeholder="Name">
+          <span class="captl"><span class="capt">Captain</span><input class="num name" id="paCap1" autocapitalize="words" autocomplete="off" spellcheck="false" placeholder="Name"></span>
+          <span class="captl"><span class="capt">Captain</span><input class="num name" id="paCap2" autocapitalize="words" autocomplete="off" spellcheck="false" placeholder="Name"></span>
         </div>
         <div class="say" id="paMsSay"></div>
       </div>
@@ -1041,7 +1048,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.30';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.31';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
