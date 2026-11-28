@@ -423,7 +423,20 @@
   .tlacts{display:flex;gap:8px;padding:6px;border-bottom:1px solid var(--line);background:var(--bg)}
   .tlacts .btn{flex:1;min-height:32px;font-size:12px}
   .tldct{color:var(--mag);font-weight:700}
+  .rtagrid{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
+  .rtawp{position:relative}
+  .rtawp .aptin{width:110px;text-align:left;padding:0 10px}
+  .rtagrid b{font-size:16px}
+  .rtagrid .tlto{margin:0}
+  #ofpOut .rtagrid .btn{flex:none;width:30px;min-width:0;height:30px;min-height:0;padding:0;font-size:16px}
+  .rtat{min-width:66px;text-align:center}
   .tltrk{cursor:pointer}
+  .tlfw > div{cursor:pointer}
+  .tlfw > div.edit{outline:1px solid var(--amber)}
+  .tlwed{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:6px;font-variant-numeric:tabular-nums}
+  .tlwed b{min-width:30px;text-align:center;font-size:14px}
+  #ofpOut .tlwed .btn{flex:none;min-width:0;width:28px;height:26px;min-height:0;padding:0;font-size:14px}
+  #ofpOut .tlwed .btn[data-fwd="r"]{width:auto;padding:0 8px;font-size:11px}
   .tltrkset{display:flex;gap:6px;margin-top:4px}
   #ofpOut .tltrkset .btn{flex:none;min-width:0;width:34px;height:28px;min-height:0;padding:0;font-size:15px}
   #ofpOut .tltrkset .btn[data-trkd="0"]{width:auto;padding:0 8px;font-size:11px}
@@ -548,6 +561,14 @@
   .rvrow.sel{border-color:var(--amber);background:rgba(245,165,36,.22);font-weight:600}
   body.compact .rvrow{padding:5px 10px;font-size:17px}
   .cmode{margin-bottom:10px}
+  .cmode button{font-size:13px}
+  .dgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .dgrid label{display:flex;flex-direction:column;gap:4px}
+  .dgrid .num{width:100%;min-width:0;text-align:center;font-size:22px;height:48px}
+  .dout{margin-top:14px}
+  .dhdg{display:flex;align-items:baseline;gap:12px}
+  .dhdg b{font-size:44px;font-weight:600;color:var(--mag);font-variant-numeric:tabular-nums}
+  .dline{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px;font-size:15px;font-variant-numeric:tabular-nums}
   .cmode button{flex:1}
   #calcKeys .key:disabled{opacity:.3}
   .cdisp{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;text-align:right;margin-bottom:12px}
@@ -698,6 +719,17 @@
       <button data-m="rest">Rest</button>
       <button data-m="num" class="on">Calculator</button>
       <button data-m="time">Time</button>
+      <button data-m="drift">Drift</button>
+    </div>
+    <div id="driftPanel" class="card" hidden>
+      <div class="label" style="margin-bottom:10px">Heading from track and wind</div>
+      <div class="dgrid">
+        <label><span class="tlk">TRK °</span><input class="num" id="dTrk" inputmode="numeric" maxlength="3" placeholder="000"></label>
+        <label><span class="tlk">Wind dir °</span><input class="num" id="dWd" inputmode="numeric" maxlength="3" placeholder="000"></label>
+        <label><span class="tlk">Wind kt</span><input class="num" id="dWs" inputmode="numeric" maxlength="3" placeholder="0"></label>
+        <label><span class="tlk">TAS kt</span><input class="num" id="dTas" inputmode="numeric" maxlength="3" placeholder="480"></label>
+      </div>
+      <div class="dout" id="dOut"></div>
     </div>
     <div id="restPanel" hidden>
     <div class="card">
@@ -983,7 +1015,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.26';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.27';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -1306,17 +1338,39 @@
     document.querySelectorAll('#calcMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
     const dot = document.querySelector('#calcKeys [data-k="."]'), pc = document.querySelector('#calcKeys [data-k="%"]');
     dot.textContent = m === 'time' ? ':' : '.'; pc.disabled = m === 'time';
-    $('restPanel').hidden = m !== 'rest'; $('calcPanel').hidden = m === 'rest';
+    $('restPanel').hidden = m !== 'rest'; $('driftPanel').hidden = m !== 'drift'; $('calcPanel').hidden = m === 'rest' || m === 'drift';
     if (m === 'rest'){ try{ crCalc(); }catch(e){} } else calcShow();
     requestAnimationFrame(() => { if (typeof fit === 'function') fit(); });
   };
   window.fdtCalcMode = setCalcMode;
+  // Drift: wind triangle — HDG = TRK + drift correction (into wind), GS, head/tail and cross wind
+  (function(){
+    const dv = store.get('drift', {trk: '', wd: '', ws: '', tas: '480'});
+    const ids = {trk: 'dTrk', wd: 'dWd', ws: 'dWs', tas: 'dTas'};
+    Object.entries(ids).forEach(([k, id]) => { const el = $(id); el.value = dv[k] || '';
+      el.addEventListener('focus', () => el.select());
+      el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, '').slice(0, 3); dv[k] = el.value; store.set('drift', dv); draw(); }); });
+    function draw(){
+      const trk = parseInt(dv.trk, 10), wd = parseInt(dv.wd, 10), ws = parseInt(dv.ws, 10) || 0, tas = parseInt(dv.tas, 10);
+      if (isNaN(trk) || isNaN(wd) || !tas){ $('dOut').innerHTML = '<div class="dimtxt">Enter TRK, wind and TAS</div>'; return; }
+      const rel = (wd - trk) * Math.PI / 180, xw = ws * Math.sin(rel), hw = ws * Math.cos(rel);
+      if (Math.abs(xw) >= tas){ $('dOut').innerHTML = '<div class="dimtxt">Crosswind is stronger than TAS</div>'; return; }
+      const wca = Math.asin(xw / tas) * 180 / Math.PI, hdg = ((Math.round(trk + wca) % 360) + 360) % 360 || 360;
+      const gs = Math.round(tas * Math.cos(wca * Math.PI / 180) - hw), d = Math.round(wca);
+      $('dOut').innerHTML = `<div class="dhdg"><span class="tlk">HDG</span><b>${String(hdg).padStart(3, '0')}°</b></div>
+        <div class="dline"><span><span class="tlk">Drift</span> ${d ? Math.abs(d) + '° ' + (d > 0 ? 'L' : 'R') : '0°'}</span>
+        <span><span class="tlk">GS</span> ${gs} kt</span>
+        <span><span class="tlk">${hw > 0.5 ? 'HW' : hw < -0.5 ? 'TW' : 'HW'}</span> ${Math.abs(Math.round(hw))} kt</span>
+        <span><span class="tlk">XW</span> ${Math.abs(Math.round(xw))} kt ${Math.round(xw) ? (xw > 0 ? 'from R' : 'from L') : ''}</span></div>`;
+    }
+    draw();
+  })();
   document.querySelectorAll('#calcMode button').forEach(b => b.onclick = () => setCalcMode(b.dataset.m));
   const press = k => calcMode === 'time' ? (k === '%' ? null : tPress(k)) : calcPress(k);
   document.querySelectorAll('#calcKeys .key').forEach(b => b.addEventListener('click', () => press(b.dataset.k)));
   // hardware keyboard support (Magic Keyboard etc.) while the Calc tab is open
   document.addEventListener('keydown', e => {
-    if (!$('view-calc').classList.contains('active') || calcMode === 'rest') return;
+    if (!$('view-calc').classList.contains('active') || calcMode === 'rest' || calcMode === 'drift') return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) return;
     const map = {Enter:'=', '=':'=', Backspace:'back', Escape:'C', Delete:'C', 'x':'*', 'X':'*'};
     const k = map[e.key] || (/^[\d.:+\-*/%]$/.test(e.key) ? e.key : null);
@@ -2127,9 +2181,11 @@
             ? `<span class="fmc${brief ? ' br' : ''}">${fmcLegs(d.route1 || d.route).map(([v, w]) => `<span class="via">${ofpEsc(v)}</span><span class="to">${ofpEsc(w)}</span>`).join('')}</span>`
             : (brief ? routeHighlights(d.route1 || d.route) : ofpEsc(d.route1 || d.route)))
           : null, false, 'route')}
+        ${d.nav ? ofpField('RTA', rtaHtml(e), false, 'rtaf') : ''}
         ${ofpField(`PAX<span class="pobl">POB <b id="pobV">${pob(pax)}</b></span><label class="crewclr scanb">Scan<input type="file" accept="image/*" data-scan="pax" hidden></label>`, paxV + '<span class="calc" id="paxMsg"></span>', false, 'paxf')}
         ${crewHtml}
       </div>`;
+    if (mode !== 'ldg') rtaBind(e);
     // Steppers (PZFW, excess, landing fuel). Typed values are saved as you type, and −/+ always step from
     // what's in the box, so iPad's "tap elsewhere doesn't leave the box" no longer loses a typed figure.
     const num = el => { const v = parseFloat(String(el.value).replace(/[−–]/g, '-').replace(/[^\d.\-]/g, '')); return isNaN(v) ? null : Math.round(v * 10) / 10; };
@@ -2282,16 +2338,24 @@
   }
   // forecast winds/temps at the 4 levels the OFP gives for this point (the planned level highlighted)
   function tlFw(p){
-    const e = ofp.recent.find(r => r.id === ofp.cur), fw = e && e.data.fwind && e.data.fwind[p[0]];
-    if (!fw) return '';
-    const sg = n => (n < 0 ? '−' : '+') + Math.abs(n);
-    return `<div class="tlfw">${fw.map(([fl, wd, ws, t]) => {
+    const e = ofp.recent.find(r => r.id === ofp.cur), fw0 = e && e.data.fwind && e.data.fwind[p[0]];
+    if (!fw0) return '';
+    const wo = ((ofp.tlWo || {})[e.id]) || {};
+    const fw = fw0.map(([fl, wd, ws, t]) => { const o = wo[p[0] + '|' + fl]; return o ? [fl, o[0], o[1], t, true] : [fl, wd, ws, t, false]; });
+    const sg = n => (n < 0 ? '−' : '+') + Math.abs(n), ek = tlFwEdit && tlFwEdit.startsWith(p[0] + '|') ? tlFwEdit : null;
+    return `<div class="tlfw">${fw.map(([fl, wd, ws, t, ed]) => {
       const c = p[3] != null ? Math.round(ws * Math.cos((wd - p[3]) * Math.PI / 180)) : null;   // + = headwind on this point's track
       const alt = fl * 100, isa = Math.round(t - (alt < 36089 ? 15 - 0.0019812 * alt : -56.5));
-      return `<div class="${String(fl) === p[2] ? 'on' : ''}"><span class="tlk">FL${fl}</span><span>${String(wd === 0 ? 360 : wd).padStart(3, '0')}/${ws}</span>`
+      return `<div class="${String(fl) === p[2] ? 'on' : ''}${ek === p[0] + '|' + fl ? ' edit' : ''}" data-fwe="${ofpEsc(p[0])}|${fl}"><span class="tlk">FL${fl}</span><span class="${ed ? 'tladjt' : ''}">${String(wd === 0 ? 360 : wd).padStart(3, '0')}/${ws}</span>`
         + (c != null ? `<span class="${c > 0 ? 'hw' : c < 0 ? 'tw' : ''}">${c > 0 ? 'HW' : c < 0 ? 'TW' : ''} ${Math.abs(c)}</span>` : '')
-        + `<span>${sg(t)}° <small>${sg(isa)}</small></span></div>`; }).join('')}</div>`;
+        + `<span>${sg(t)}° <small>${sg(isa)}</small></span></div>`; }).join('')}</div>`
+      + (ek ? (() => { const fl = +ek.split('|')[1], w = fw.find(x => x[0] === fl);
+          return `<div class="tlwed"><span class="tlk">FL${fl}</span>
+            <span class="tlk">DIR</span><button class="btn small" data-fwd="d-10">−</button><b>${String(w[1] === 0 ? 360 : w[1]).padStart(3, '0')}</b><button class="btn small" data-fwd="d10">+</button>
+            <span class="tlk">KT</span><button class="btn small" data-fwd="s-5">−</button><b>${w[2]}</b><button class="btn small" data-fwd="s5">+</button>
+            ${w[4] ? '<button class="btn small" data-fwd="r">OFP</button>' : ''}</div>`; })() : '');
   }
+  let tlFwEdit = null;   // "POINT|FL" of the forecast wind being edited
   let tlTrkEdit = null;   // point whose TRK −/+ is showing
   const tlFwOpen = {Now: false, Active: false, Next: false}; const tlOpen = {Now: false, Next: false};   // NOW and NEXT start folded   // NOW card starts folded (name + time); tap it to open   // forecast-wind strip: tap WIND on a card to show/hide
   function tlCard(lab, p, extra, turn, isRep){
@@ -2300,15 +2364,16 @@
     const foldable = lab === 'Now' || lab === 'Next', fold = foldable && !tlOpen[lab];
     return `<div class="tlc${lab === 'Active' ? ' tlnext' : ''}${foldable ? ' tlnow' + (fold ? ' fold' : '') : ''}"><div class="tlh"${foldable ? ` data-fold="${lab}"` : ''}><span class="tlk">${lab}</span><b>${ofpEsc(p[0])}</b>${p[0].startsWith('-') && tlFirName(p[0]) ? `<span class="tlfir"> (${ofpEsc(tlFirName(p[0]))})</span>` : ''}${isRep ? '<small class="tlrep">(report to ATC)</small>' : ''}<span class="tlx">${extra}</span></div>
       <div class="tlg tlg4">${cell('FL', tlFL(p))}${cell('TEMP', tlTemp(p, true))}${cell('MSA', tlMsa(p))}${cell('VWS', tlVws(p))}</div>
-      <div class="tlg">${`<div class="tltrk" data-trk="${p.oi}"><span class="tlk">TRK / HDG</span><div class="tlv">${tlTH(p)}${turn ? ` <small class="turn">${turn}</small>` : ''}</div>${tlTrkEdit === p.oi && p[3] != null ? `<div class="tltrkset"><button class="btn small" data-trkd="-1" data-i="${p.oi}">−</button><button class="btn small" data-trkd="1" data-i="${p.oi}">+</button>${p.trkSet ? `<button class="btn small" data-trkd="0" data-i="${p.oi}">OFP</button>` : ''}</div>` : ''}</div>`}${tlFw(p) ? `<div class="tlwtap" data-fwt="${lab}"><span class="tlk">WIND <span class="tlchev">${tlFwOpen[lab] ? '▴' : '▾'}</span></span><div class="tlv">${tlWind(p)}</div></div>` : cell('WIND', tlWind(p))}</div>${tlFwOpen[lab] ? tlFw(p) : ''}</div>`;
+      <div class="tlg">${`<div class="tltrk" data-trk="${p.oi}"><span class="tlk">TRK / HDG</span><div class="tlv">${tlTH(p)}${turn ? ` <small class="turn">${turn}</small>` : ''}</div>${tlTrkEdit === p.oi && p[3] != null ? `<div class="tltrkset"><button class="btn small" data-trkd="-1" data-i="${p.oi}">−</button><button class="btn small" data-trkd="1" data-i="${p.oi}">+</button>${p.trkSet ? `<button class="btn small" data-trkd="0" data-i="${p.oi}">OFP</button>` : ''}</div>` : ''}</div>`}${tlFw(p) ? `<div class="tlwtap" data-fwt="${lab}"><span class="tlk">WIND <span class="tlchev">${tlFwOpen[lab] ? '▴' : '▾'}</span></span><div class="tlv${p.windSet ? ' tladjt' : ''}">${tlWind(p)}</div></div>` : cell('WIND', tlWind(p))}</div>${tlFwOpen[lab] ? tlFw(p) : ''}</div>`;
   }
   const tlAdj = e => ((ofp.tlAdj || {})[e.id]) || 0;
   const tlDct = e => ((ofp.tlDct || {})[e.id]) || null;   // {from: active point, to: direct-to point} (original indices)
   // nav with ADJ applied, each point keeping its original index (oi); points skipped by a DIRECT TO are left out
   function tlNav(e, adj){
     const d = tlDct(e);
-    const tk = ((ofp.tlTrk || {})[e.id]) || {};
-    return e.data.nav.map((p, i) => { const q = p.slice(); q[1] += adj; q.oi = i; if (tk[i] != null){ q[3] = tk[i]; q.trkSet = true; } return q; }).filter(q => !d || !(q.oi > d.from && q.oi < d.to));
+    const tk = ((ofp.tlTrk || {})[e.id]) || {}, wo = ((ofp.tlWo || {})[e.id]) || {};
+    return e.data.nav.map((p, i) => { const q = p.slice(); q[1] += adj; q.oi = i; if (tk[i] != null){ q[3] = tk[i]; q.trkSet = true; }
+      const w = wo[q[0] + '|' + q[2]]; if (w){ q[5] = w[0]; q[6] = w[1]; q.windSet = true; } return q; }).filter(q => !d || !(q.oi > d.from && q.oi < d.to));
   }
   const FIRS = {WSJC:'Singapore',WMFC:'Kuala Lumpur',WBFC:'Kota Kinabalu',WIIF:'Jakarta',WAAF:'Ujung Pandang',VTBB:'Bangkok',VVHM:'Ho Chi Minh',VVHN:'Hanoi',VLVT:'Vientiane',VDPF:'Phnom Penh',VYYF:'Yangon',VGFR:'Dhaka',
     VOMF:'Chennai',VECF:'Kolkata',VIDF:'Delhi',VABF:'Mumbai',VCCF:'Colombo',VRMF:'Male',VNSM:'Kathmandu',OPLR:'Lahore',OPKR:'Karachi',OAKX:'Kabul',OIIX:'Tehran',OMAE:'Emirates',OOMM:'Muscat',OBBB:'Bahrain',OEJD:'Jeddah',OKAC:'Kuwait',ORBB:'Baghdad',OJAC:'Amman',OSTT:'Damascus',
@@ -2385,6 +2450,14 @@
       if (td){ const i = +td.dataset.i, k = +td.dataset.trkd; ofp.tlTrk = ofp.tlTrk || {}; const m = ofp.tlTrk[e.id] = ofp.tlTrk[e.id] || {};
         if (!k) delete m[i]; else { const base = m[i] != null ? m[i] : e.data.nav[i][3]; m[i] = ((base + k - 1) % 360 + 360) % 360 + 1; }
         store.set('ofp', ofp); tlTick(true); return; }
+      const fd = ev.target.closest('[data-fwd]');
+      if (fd && tlFwEdit){ const [pt, fl] = tlFwEdit.split('|'), base = ((e.data.fwind || {})[pt] || []).find(x => x[0] === +fl); if (!base) return;
+        ofp.tlWo = ofp.tlWo || {}; const m = ofp.tlWo[e.id] = ofp.tlWo[e.id] || {}, cur = m[tlFwEdit] || [base[1], base[2]], k = fd.dataset.fwd;
+        if (k === 'r') delete m[tlFwEdit];
+        else { const v = +k.slice(1); if (k[0] === 'd') cur[0] = ((cur[0] + v) % 360 + 360) % 360; else cur[1] = Math.max(0, cur[1] + v);
+          if (cur[0] === base[1] && cur[1] === base[2]) delete m[tlFwEdit]; else m[tlFwEdit] = cur.slice(); }
+        store.set('ofp', ofp); tlTick(true); return; }
+      const fe = ev.target.closest('[data-fwe]'); if (fe){ tlFwEdit = tlFwEdit === fe.dataset.fwe ? null : fe.dataset.fwe; tlTick(true); return; }
       const tr = ev.target.closest('[data-trk]'); if (tr){ const i = +tr.dataset.trk; tlTrkEdit = tlTrkEdit === i ? null : i; tlTick(true); return; }
       const w = ev.target.closest('[data-fwt]'); if (w){ tlFwOpen[w.dataset.fwt] = !tlFwOpen[w.dataset.fwt]; tlTick(true); return; }
       const f = ev.target.closest('[data-fold]') || (ev.target.closest('.tlnow.fold') || {}).querySelector?.('[data-fold]');
@@ -2419,13 +2492,12 @@
     const sec = (now - to.ms) / 1000, el = sec / 60, nav = tlNav(e, adj), rep = tlRep(e);
     $('tlEl').textContent = tlHMS(sec); $('tlElK').textContent = sec < 0 ? 'To T/O' : 'Since T/O';
     // To LDG: OFP flight time (+ ADJ) minus time since T/O; vs schedule: actual T/O against STD + taxi, plus ADJ (same block time)
-    const od = e.data, ftM = od.ft ? (+od.ft.split('.')[0]) * 60 + (+od.ft.split('.')[1]) : null;
-    if (ftM != null){
-      const rem = (ftM + adj) * 60 - sec; $('tlRem').textContent = tlHMS(Math.max(0, rem)).slice(0, -3);
-      if (od.std && /^\d{4}$/.test(od.std) && od.sta && /^\d{4}$/.test(od.sta)){
-        const t0 = new Date(to.ms); let pt = Date.UTC(t0.getUTCFullYear(), t0.getUTCMonth(), t0.getUTCDate(), +od.std.slice(0, 2), +od.std.slice(2)) + (crOfp.taxi || 0) * 60e3;
-        if (pt - to.ms > 12 * 3600e3) pt -= 864e5; else if (to.ms - pt > 12 * 3600e3) pt += 864e5;
-        const late = Math.round((to.ms - pt) / 60e3 + adj), sta = new Date(Date.UTC(2000, 0, 1, +od.sta.slice(0, 2), +od.sta.slice(2)) + late * 60e3);
+    // To LDG = the LDG page's landing time (default STD + taxi + flight time) minus now; ARR vs STA the same way as on LDG
+    const od = e.data, lms = ldgMs(e), lp = ldgPlanMs(od);
+    if (lms != null){
+      const rem = (lms - now) / 1000; $('tlRem').textContent = tlHMS(Math.max(0, rem)).slice(0, -3);
+      if (lp != null && od.sta && /^\d{4}$/.test(od.sta)){
+        const late = Math.round((lms - lp) / 60e3), sta = new Date(Date.UTC(2000, 0, 1, +od.sta.slice(0, 2), +od.sta.slice(2)) + late * 60e3);
         $('tlArr').innerHTML = `<span>ARR ${pad2(sta.getUTCHours())}:${pad2(sta.getUTCMinutes())}Z</span> <span class="${late > 0 ? 'late' : late < 0 ? 'early' : ''}">${late ? (late > 0 ? '+' : '−') + Math.abs(late) + ' min' : 'on time'}</span>`;
       }
     }
@@ -2655,6 +2727,36 @@
     else if (file) ocFromFile(id, file);
     else ocMsg(`Couldn’t get the picture from that drag (got: ${[...(dt.types || [])].join(', ') || 'nothing'}). Use the button instead.`);
   });
+  // ---------- RTA: pick a waypoint, RTA defaults to STD + taxi + its ACTM; T/O time = RTA − ACTM
+  function rtaGet(e){ return ((ofp.rta || {})[e.id]) || null; }
+  function rtaDefault(e, i){ const s0 = stdMs(e.data); return s0 == null ? null : s0 + ((crOfp.taxi != null ? crOfp.taxi : 15) + e.data.nav[i][1]) * 60e3; }
+  function rtaHtml(e){
+    const r = rtaGet(e), p = r && e.data.nav[r.i], ms = r ? (r.ms != null ? r.ms : rtaDefault(e, r.i)) : null;
+    return `<div class="rtagrid">
+      <span class="tlk">Waypoint</span><span class="rtawp"><input class="num aptin" id="rtaWp" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="—" value="${p ? ofpEsc(p[0]) : ''}"><div class="aptsug" id="rtaSug" hidden></div></span>
+      <span class="tlk">RTA</span><span class="tlto">${p ? `<button class="btn small" data-rta="-1">−</button><b class="rtat${r.ms != null ? ' tladjt' : ''}">${zHM(ms)}Z</b><button class="btn small" data-rta="1">+</button>` : '<span class="dimtxt">pick a waypoint</span>'}</span>
+      <span class="tlk">Take-off at</span><b>${p && ms != null ? zHM(ms - p[1] * 60e3) + 'Z' : '—'}</b>
+    </div>`;
+  }
+  function rtaBind(e){
+    const inp = $('rtaWp'); if (!inp) return;
+    const sug = $('rtaSug'), nav = e.data.nav;
+    const pick = i => { ofp.rta = ofp.rta || {}; ofp.rta[e.id] = {i}; store.set('ofp', ofp); ofpRender(); };
+    inp.addEventListener('focus', () => inp.select());
+    inp.addEventListener('input', () => {
+      const q = inp.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''); inp.value = q;
+      const hits = q ? nav.map((p, i) => [p[0], i]).filter(([n]) => n.replace(/^-/, '').startsWith(q.replace(/^-/, ''))).slice(0, 8) : [];
+      sug.innerHTML = hits.length ? hits.map(([n, i]) => `<button type="button" data-i="${i}"><b>${ofpEsc(n)}</b> ${String(Math.floor(nav[i][1] / 60)).padStart(2, '0')}:${String(nav[i][1] % 60).padStart(2, '0')}</button>`).join('') : (q ? '<div class="none">No match</div>' : '');
+      sug.hidden = !q;
+    });
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ const f = sug.querySelector('[data-i]'); if (f) pick(+f.dataset.i); } });
+    sug.addEventListener('pointerdown', ev => { const b = ev.target.closest('[data-i]'); if (b){ ev.preventDefault(); pick(+b.dataset.i); } });
+    inp.addEventListener('blur', () => setTimeout(() => { sug.hidden = true; const r = rtaGet(e); inp.value = r ? nav[r.i][0] : ''; }, 150));
+    $('ofpOut').querySelectorAll('[data-rta]').forEach(b => b.onclick = () => { const r = rtaGet(e); if (!r) return;
+      const ms = (r.ms != null ? r.ms : rtaDefault(e, r.i)) + (+b.dataset.rta) * 60e3, d0 = rtaDefault(e, r.i);
+      r.ms = ms === d0 ? null : ms; if (r.ms == null) delete r.ms; store.set('ofp', ofp); ofpRender(); });
+  }
+
   // ---------- OFP page modes: PRE FLT (figures) · CRZ (timeline) · LDG (landing countdown, landing figures, PA)
   function ofpModeNow(){ return ofp.mode || (ofp.tlv ? 'crz' : 'pre'); }
   function ofpModePaint(){
