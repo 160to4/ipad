@@ -444,6 +444,8 @@
   .ofpmode button{flex:1;font-size:12px;letter-spacing:.06em;font-weight:700;min-height:34px}
   body.compact .ofpmode button{min-height:30px}
   #ofpMeta:empty{display:none}
+  .ofpmode button{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+  .brtag{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--mag);text-transform:none}
   .card.ofptop{position:sticky;top:-8px;z-index:15;box-shadow:0 6px 14px rgba(0,0,0,.35)}
   .ldgtop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:4px 0 10px}
   .ldgtop .tlclk b{font-size:24px}
@@ -981,7 +983,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.25';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.26';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2658,11 +2660,15 @@
   function ofpModePaint(){
     const m = ofpModeNow();
     document.querySelectorAll('#ofpMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    const pre = document.querySelector('#ofpMode [data-m="pre"]'); pre.innerHTML = 'PRE FLT' + (ofp.brief ? '<small class="brtag">(brief)</small>' : '');
     $('ldgPA').hidden = m !== 'ldg';
   }
   const setOfpMode = m => { ofp.mode = m; ofp.tlv = m === 'crz'; store.set('ofp', ofp); ofpModePaint(); ofpRender(); };
   window.fdtOfpMode = setOfpMode;
-  $('ofpMode').addEventListener('click', ev => { const b = ev.target.closest('[data-m]'); if (b) setOfpMode(b.dataset.m); });
+  // tapping PRE FLT while already on it switches BRIEF on/off
+  $('ofpMode').addEventListener('click', ev => { const b = ev.target.closest('[data-m]'); if (!b) return;
+    if (b.dataset.m === 'pre' && ofpModeNow() === 'pre'){ ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpModePaint(); ofpRender(); return; }
+    setOfpMode(b.dataset.m); });
 
   // LDG countdown: landing time defaults to STD + taxi + flight time; −/+ or type to change it (saved per OFP)
   function stdMs(d){
