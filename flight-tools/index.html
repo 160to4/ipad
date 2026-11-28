@@ -321,6 +321,7 @@
   /* OFP */
   .ofpopen{position:relative;cursor:pointer;display:inline-flex;align-items:center}
   .nrow .num.sel.dd.ofprecent,.ofprecent{max-width:260px}
+  #ofpBar .ofprecent{flex:1 1 0;min-width:0;max-width:none;width:auto;text-overflow:ellipsis}
   #view-ofp .num.sel.dd{width:auto;min-width:0;height:40px;font-size:15px;padding:0 30px 0 10px;
     background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b97a5' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center}
   .ofpgrid{display:flex;flex-direction:column;gap:5px}
@@ -428,8 +429,11 @@
   .rtaf .tlto{display:flex;align-items:center;gap:5px;margin:0}
   #ofpOut .rtaf .num.t24{flex:none;width:76px;height:30px;font-size:15px;padding:0 4px}
   .rtaf .rtato{font-size:17px}
-  .rtawp{position:relative}
-  .rtawp .aptin{width:110px;text-align:left;padding:0 10px}
+  .rtaf .v{min-width:0}
+  .rtawp{position:relative;display:block;width:100%}
+  #ofpOut .rtawp .aptin{width:100%;flex:none;box-sizing:border-box;text-align:left;padding:0 10px}
+  .rtaf .tlto{width:100%}
+  #ofpOut .rtaf .num.t24{flex:1 1 auto;width:auto;min-width:0}
   .rtagrid b{font-size:16px}
   .rtagrid .tlto{margin:0}
   #ofpOut .rtaf .btn{flex:none;width:30px;min-width:0;height:30px;min-height:0;padding:0;font-size:16px}
@@ -1025,7 +1029,7 @@
 <div id="ver" style="display:none"></div>
 <script>
 (() => {
-  const APP_V = 'v7.28';   // bump by 0.01 with sw.js VERSION on every release
+  const APP_V = 'v7.29';   // bump by 0.01 with sw.js VERSION on every release
   const $ = id => document.getElementById(id);
   // Saved settings. A copy is kept in memory too, so the app keeps working even if the iPad refuses to save
   // (e.g. this app's storage is full) — and that failure is shown under the scratchpad.
@@ -2291,7 +2295,12 @@
   });
   $('ofpRecent').addEventListener('change', () => { ofp.cur = $('ofpRecent').value; store.set('ofp', ofp); ofpRender();
     const e = ofp.recent.find(r => r.id === ofp.cur); if (e){ $('ofpMeta').textContent = ''; ofpToRest(e.data); } });
-  $('ofpOut').addEventListener('click', ev => { if (ev.target.id === 'fmcBtn'){ ofp.fmc = !ofp.fmc; store.set('ofp', ofp); ofpRender(); } });
+  $('ofpOut').addEventListener('click', ev => { if (ev.target.id === 'fmcBtn'){ ev.preventDefault();
+    const sc = [document.querySelector('main'), $('view-ofp')].find(x => x && x.scrollHeight > x.clientHeight + 1 && getComputedStyle(x).overflowY !== 'hidden') || document.querySelector('main');
+    const top0 = sc.scrollTop, y0 = ev.target.getBoundingClientRect().top;
+    ofp.fmc = !ofp.fmc; store.set('ofp', ofp); ofpRender();
+    const fix = () => { sc.scrollTop = top0; const b = $('fmcBtn'); if (b) sc.scrollTop += b.getBoundingClientRect().top - y0; };
+    fix(); requestAnimationFrame(fix); } });
   $('ofpBrief').onclick = () => { ofp.brief = !ofp.brief; store.set('ofp', ofp); ofpRender(); };
   $('ofpTl').onclick = () => { ofp.tlv = !ofp.tlv; store.set('ofp', ofp); ofpRender(); };
 
